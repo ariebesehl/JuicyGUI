@@ -19,6 +19,9 @@ JuicyGUI::JuicyGUI(SDL_Window* Window, SDL_Renderer* Renderer, SDL_Event* Event)
 }
 
 JuicyGUI::~JuicyGUI() {
+    for (uint32_t i = 0; i < _ButtonListSize; i++) {
+        delete _ButtonList[i];
+    }
     delete _ButtonList;
     IMG_Quit();
     TTF_Quit();
@@ -26,19 +29,19 @@ JuicyGUI::~JuicyGUI() {
 
 bool JuicyGUI::RegisterElement(void* ptrElement, JuicyGUI_Type elementType) {
     switch (elementType) {
-        case JUICYGUI_TYPE_ID_BUTTON:
-            JuicyGUI_Button* ptrButton;
-            ptrButton = NULL;
-            ptrButton = static_cast<JuicyGUI_Button*>(ptrElement);
-            if (ptrButton != NULL) {
-                JuicyGUI_Button** ptrCache = new JuicyGUI_Button*[_ButtonListSize + 1];
-                for (uint32_t i = 0; i < _ButtonListSize; i++) {
-                    ptrCache[i] = *(_ButtonList + i);
+        case JUICYGUI_TYPE_ID_BUTTON: {
+                JuicyGUI_Button* ptrButton = NULL;
+                ptrButton = static_cast<JuicyGUI_Button*>(ptrElement);
+                if (ptrButton != NULL) {
+                    JuicyGUI_Button** ptrCache = new JuicyGUI_Button*[_ButtonListSize + 1];
+                    for (uint32_t i = 0; i < _ButtonListSize; i++) {
+                        ptrCache[i] = *(_ButtonList + i);
+                    }
+                    ptrCache[_ButtonListSize] = ptrButton;
+                    delete _ButtonList;
+                    _ButtonList = ptrCache;
+                    _ButtonListSize++;
                 }
-                ptrCache[_ButtonListSize] = ptrButton;
-                delete _ButtonList;
-                _ButtonList = ptrCache;
-                _ButtonListSize++;
             }
             return true;
         default:
