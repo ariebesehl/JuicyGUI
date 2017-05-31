@@ -3,6 +3,8 @@
 #include "JuicyGUI_Button.h"
 #include <iostream>
 
+
+
 JuicyGUI::JuicyGUI(SDL_Window* Window, SDL_Renderer* Renderer, SDL_Event* Event) {
     // init GUI variables
     _Window = Window;
@@ -16,6 +18,18 @@ JuicyGUI::JuicyGUI(SDL_Window* Window, SDL_Renderer* Renderer, SDL_Event* Event)
     IMG_Init(IMG_INIT_PNG);
     TTF_Init();
     UpdateState(NULL, NULL);
+    _CharsetCursor.x = 0;
+    _CharsetCursor.y = 0;
+    _Font = TTF_OpenFont(GAME_UI_FONT_TYPE, 16);
+    if (_Font != NULL) {
+        char charEnum[] = {0, '\0'};
+        char* ptrChar = &charEnum[0];
+        for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
+            TTF_SizeText(_Font, ptrChar, &_CharsetWidth[i], (i != JUICYGUI_CHARSET_REFERENCE_HEIGHT) ? NULL : &_CharsetHeight);
+            _Charset[i] = CreateTextureTXT(ptrChar, NULL, _Font, GAME_UI_FONT_COLOR);
+            (*ptrChar)++;
+        }
+    }
 }
 
 JuicyGUI::~JuicyGUI() {
@@ -23,8 +37,47 @@ JuicyGUI::~JuicyGUI() {
         delete _ButtonList[i];
     }
     delete _ButtonList;
-    IMG_Quit();
+    for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
+        SDL_DestroyTexture(_Charset[i]);
+    }
+    TTF_CloseFont(_Font);
     TTF_Quit();
+    IMG_Quit();
+}
+
+void JuicyGUI::PrintTXT(const char* text, SDL_Point* textPosition) {
+    if (text != NULL) {
+        SDL_Rect drawRect;
+        drawRect.h = _CharsetHeight;
+        SetPrintCursor(textPosition);
+        int cacheCursorNL = _CharsetCursor.x;
+        int i = 0;
+        while (true) {
+            if (text[i] != '\0' || i >= JUICYGUI_CHARSET_MAX_LENGTH) {
+                switch (text[i]) {
+                    default:
+                        if (_CharsetWidth[(uint8_t)*(text + i)]) {
+                            drawRect.x = _CharsetCursor.x;
+                            drawRect.y = _CharsetCursor.y;
+                            drawRect.w = _CharsetWidth[(uint8_t)*(text + i)];
+                            SDL_RenderCopy(_Renderer, _Charset[(uint8_t)*(text + i)], NULL, &drawRect);
+                            _CharsetCursor.x += drawRect.w;
+                        }
+                        break;
+                }
+            } else {
+                return;
+            }
+            i++;
+        }
+    }
+}
+
+void JuicyGUI::SetPrintCursor(SDL_Point* cursorPos) {
+    if (cursorPos != NULL) {
+        _CharsetCursor.x = cursorPos->x;
+        _CharsetCursor.y = cursorPos->y;
+    }
 }
 
 bool JuicyGUI::RegisterElement(void* ptrElement, JuicyGUI_Type elementType) {
@@ -86,18 +139,21 @@ SDL_Texture* JuicyGUI::CreateTexturePNG(const char* path) {
 }
 
 SDL_Texture* JuicyGUI::CreateTextureTXT(const char* text, SDL_Point* dimensions, TTF_Font* font, JuicyGUI_Color color) {
-    SDL_Texture* texture = NULL;
     SDL_Color cacheColor;
     cacheColor.r = color >> 24;
     cacheColor.g = color >> 16;
     cacheColor.b = color >> 8;
     cacheColor.a = color;
-    TTF_SizeText(font, text, &(dimensions->x), &(dimensions->y));
     SDL_Surface* cache = TTF_RenderText_Blended(font, text, cacheColor);
-    if (cache == NULL) return texture;
-    texture = SDL_CreateTextureFromSurface(_Renderer, cache);
-    SDL_FreeSurface(cache);
-    return texture;
+    if (cache != NULL) {
+        if (dimensions != NULL) TTF_SizeText(font, text, &(dimensions->x), &(dimensions->y));
+        SDL_Texture* texture = NULL;
+        texture = SDL_CreateTextureFromSurface(_Renderer, cache);
+        SDL_FreeSurface(cache);
+        return texture;
+    } else {
+        return NULL;
+    }
 }
 
 void JuicyGUI::DrawBackground(JuicyGUI_Color color) {
