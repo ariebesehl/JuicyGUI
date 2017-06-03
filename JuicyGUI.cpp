@@ -29,7 +29,9 @@ JuicyGUI::JuicyGUI(SDL_Window* Window, SDL_Renderer* Renderer, SDL_Event* Event)
             _Charset[i] = CreateTextureTXT(ptrChar, NULL, _Font, GAME_UI_FONT_COLOR);
             (*ptrChar)++;
         }
+        _CharsetLineMargin = _CharsetHeight >> JUICYGUI_CHARSET_LINE_MARGIN_BIT_SHIFT;
     }
+    _TmilNow = SDL_GetTicks();
 }
 
 JuicyGUI::~JuicyGUI() {
@@ -50,7 +52,6 @@ void JuicyGUI::PrintTXT(const char* text, SDL_Point* textPosition) {
         SDL_Rect drawRect;
         drawRect.h = _CharsetHeight;
         SetPrintCursor(textPosition);
-        int cacheCursorNL = _CharsetCursor.x;
         int i = 0;
         while (true) {
             if (text[i] != '\0' || i >= JUICYGUI_CHARSET_MAX_LENGTH) {
@@ -72,6 +73,37 @@ void JuicyGUI::PrintTXT(const char* text, SDL_Point* textPosition) {
         }
     }
 }
+
+void JuicyGUI::PrintLnTXT(const char* text, SDL_Point* textPosition) {
+    if (text != NULL) {
+        SDL_Rect drawRect;
+        drawRect.h = _CharsetHeight;
+        SetPrintCursor(textPosition);
+        int cacheCursorNL = _CharsetCursor.x;
+        int i = 0;
+        while (true) {
+            if (text[i] != '\0' || i >= JUICYGUI_CHARSET_MAX_LENGTH) {
+                switch (text[i]) {
+                    default:
+                        if (_CharsetWidth[(uint8_t)*(text + i)]) {
+                            drawRect.x = _CharsetCursor.x;
+                            drawRect.y = _CharsetCursor.y;
+                            drawRect.w = _CharsetWidth[(uint8_t)*(text + i)];
+                            SDL_RenderCopy(_Renderer, _Charset[(uint8_t)*(text + i)], NULL, &drawRect);
+                            _CharsetCursor.x += drawRect.w;
+                        }
+                        break;
+                }
+            } else {
+                _CharsetCursor.x = cacheCursorNL;
+                _CharsetCursor.y += _CharsetHeight + _CharsetLineMargin;
+                return;
+            }
+            i++;
+        }
+    }
+}
+
 
 void JuicyGUI::SetPrintCursor(SDL_Point* cursorPos) {
     if (cursorPos != NULL) {
@@ -104,6 +136,9 @@ bool JuicyGUI::RegisterElement(void* ptrElement, JuicyGUI_Type elementType) {
 
 
 JuicyGUI_Action JuicyGUI::UpdateState(JuicyGUI_ID* elementID, JuicyGUI_Action* elementAction) {
+    _TmilLast = _TmilNow;
+    _TmilNow = SDL_GetTicks();
+    _TmilDelta = _TmilNow - _TmilLast;
     JuicyGUI_Action hostAction = JUICYGUI_ACTION_NONE;
     static SDL_Point lastScreenSize;
     SDL_GetWindowSize(_Window, &_ScreenSize.x, &_ScreenSize.y);

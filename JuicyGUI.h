@@ -28,6 +28,7 @@ typedef uint32_t JuicyGUI_Color;
 typedef uint32_t JuicyGUI_ID;
 typedef uint32_t JuicyGUI_Type;
 typedef uint32_t JuicyGUI_Action;
+typedef uint32_t JuicyGUI_Time;
 
 class JuicyGUI_Button;
 
@@ -45,7 +46,9 @@ class JuicyGUI {
         int GetScreenSizeBigger() {return (_ScreenSize.x > _ScreenSize.y) ? _ScreenSize.x : _ScreenSize.y;};
         int GetScreenSizeSmaller() {return (_ScreenSize.x > _ScreenSize.y) ? _ScreenSize.y : _ScreenSize.x;};
         void PrintTXT(const char*, SDL_Point*);
+        void PrintLnTXT(const char*, SDL_Point*);
         void SetPrintCursor(SDL_Point*);
+        JuicyGUI_Time GetTimeDelta();
     private:
         bool EvaluateMouseOver(SDL_Rect*);
         JuicyGUI_Action EvaluateState(JuicyGUI_ID, JuicyGUI_Type, SDL_Rect*);
@@ -56,6 +59,9 @@ class JuicyGUI {
         SDL_Event* _Event;
         JuicyGUI_ID _CommandCache;
         JuicyGUI_ID _CommandQueue;
+        JuicyGUI_Time _TmilNow;
+        JuicyGUI_Time _TmilLast;
+        JuicyGUI_Time _TmilDelta;
         SDL_Point _ScreenSize;
         SDL_Point _MousePos;
         uint8_t _MouseState;
@@ -63,6 +69,7 @@ class JuicyGUI {
         SDL_Texture* _Charset[JUICYGUI_CHARSET_SIZE];
         int _CharsetWidth[JUICYGUI_CHARSET_SIZE];
         int _CharsetHeight;
+        int _CharsetLineMargin;
         SDL_Point _CharsetCursor;
         JuicyGUI_Button** _ButtonList;
         uint32_t _ButtonListSize;
