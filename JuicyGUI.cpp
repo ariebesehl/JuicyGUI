@@ -14,10 +14,26 @@ JuicyGUI::JuicyGUI(SDL_Window* Window, SDL_Renderer* Renderer, SDL_Event* Event)
     _CommandQueue = 0;
     _ButtonList = NULL;
     _ButtonListSize = 0;
+    _TmilNow = SDL_GetTicks();
     // init PNG handling systems
     IMG_Init(IMG_INIT_PNG);
     TTF_Init();
+    LoadCharset();
     UpdateState(NULL, NULL);
+}
+
+JuicyGUI::~JuicyGUI() {
+    for (uint32_t i = 0; i < _ButtonListSize; i++) {
+        delete _ButtonList[i];
+    }
+    delete _ButtonList;
+    DestroyCharset();
+    TTF_Quit();
+    IMG_Quit();
+}
+
+bool JuicyGUI::LoadCharset() {
+    DestroyCharset();
     _CharsetCursor.x = 0;
     _CharsetCursor.y = 0;
     _Font = TTF_OpenFont(GAME_UI_FONT_TYPE, 16);
@@ -30,22 +46,26 @@ JuicyGUI::JuicyGUI(SDL_Window* Window, SDL_Renderer* Renderer, SDL_Event* Event)
             (*ptrChar)++;
         }
         _CharsetLineMargin = _CharsetHeight >> JUICYGUI_CHARSET_LINE_MARGIN_BIT_SHIFT;
+        return true;
+    } else {
+        _CharsetLineMargin = 0;
+        _CharsetHeight = 0;
+        for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
+            _CharsetWidth[i] = 0;
+            _Charset[i] = NULL;
+        }
+        return false;
     }
-    _TmilNow = SDL_GetTicks();
 }
 
-JuicyGUI::~JuicyGUI() {
-    for (uint32_t i = 0; i < _ButtonListSize; i++) {
-        delete _ButtonList[i];
-    }
-    delete _ButtonList;
+void JuicyGUI::DestroyCharset() {
     for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-        SDL_DestroyTexture(_Charset[i]);
+        if (_Charset[i] != NULL) SDL_DestroyTexture(_Charset[i]);
+        _Charset[i] = NULL;
     }
-    TTF_CloseFont(_Font);
-    TTF_Quit();
-    IMG_Quit();
+    if (_Font != NULL) TTF_CloseFont(_Font);
 }
+
 
 void JuicyGUI::PrintTXT(const char* text, SDL_Point* textPosition) {
     if (text != NULL) {
@@ -111,6 +131,16 @@ void JuicyGUI::SetPrintCursor(SDL_Point* cursorPos) {
         _CharsetCursor.y = cursorPos->y;
     }
 }
+
+SDL_Point* JuicyGUI::GetPrintCursor() {
+    return &_CharsetCursor;
+}
+
+int JuicyGUI::GetCharsetHeight() {
+    return _CharsetHeight;
+}
+
+
 
 bool JuicyGUI::RegisterElement(void* ptrElement, JuicyGUI_Type elementType) {
     switch (elementType) {

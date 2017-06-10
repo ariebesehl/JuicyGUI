@@ -49,6 +49,10 @@ class JuicyGUI {
         void PrintLnTXT(const char*, SDL_Point*);
         void SetPrintCursor(SDL_Point*);
         JuicyGUI_Time GetTimeDelta();
+        bool LoadCharset();
+        void DestroyCharset();
+        SDL_Point* GetPrintCursor();
+        int GetCharsetHeight();
     private:
         bool EvaluateMouseOver(SDL_Rect*);
         JuicyGUI_Action EvaluateState(JuicyGUI_ID, JuicyGUI_Type, SDL_Rect*);
