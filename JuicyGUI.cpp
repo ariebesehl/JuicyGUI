@@ -77,7 +77,7 @@ void JuicyGUI::PrintTXT(const char* text, SDL_Point* textPosition) {
         SetPrintCursor(textPosition);
         int i = 0;
         while (true) {
-            if (text[i] != '\0' || i >= JUICYGUI_CHARSET_MAX_LENGTH) {
+            if (text[i] != '\0' && i < JUICYGUI_CHARSET_MAX_LENGTH) {
                 switch (text[i]) {
                     default:
                         if (_CharsetWidth[(uint8_t)*(text + i)]) {
@@ -105,7 +105,7 @@ void JuicyGUI::PrintLnTXT(const char* text, SDL_Point* textPosition) {
         int cacheCursorNL = _CharsetCursor.x;
         int i = 0;
         while (true) {
-            if (text[i] != '\0' || i >= JUICYGUI_CHARSET_MAX_LENGTH) {
+            if (text[i] != '\0' && i < JUICYGUI_CHARSET_MAX_LENGTH) {
                 switch (text[i]) {
                     default:
                         if (_CharsetWidth[(uint8_t)*(text + i)]) {
