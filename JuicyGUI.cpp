@@ -48,20 +48,23 @@ bool JuicyGUI::LoadCharset() {
         _CharsetLineMargin = _CharsetHeight >> JUICYGUI_CHARSET_LINE_MARGIN_BIT_SHIFT;
         return true;
     } else {
-        _CharsetLineMargin = 0;
-        _CharsetHeight = 0;
         for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-            _CharsetWidth[i] = 0;
             _Charset[i] = NULL;
         }
+        DestroyCharset();
         return false;
     }
 }
 
 void JuicyGUI::DestroyCharset() {
+    _CharsetLineMargin = 0;
+    _CharsetHeight = 0;
     for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-        if (_Charset[i] != NULL) SDL_DestroyTexture(_Charset[i]);
-        _Charset[i] = NULL;
+        _CharsetWidth[i] = 0;
+        if (_Charset[i] != NULL) {
+            SDL_DestroyTexture(_Charset[i]);
+            _Charset[i] = NULL;
+        }
     }
     if (_Font != NULL) TTF_CloseFont(_Font);
 }
