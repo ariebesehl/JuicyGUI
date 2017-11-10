@@ -10,11 +10,13 @@ JuicyGUI::JuicyGUI(SDL_Window* Window, SDL_Renderer* Renderer, SDL_Event* Event)
     _Window = Window;
     _Renderer = Renderer;
     _Event = Event;
-    _CommandCache = 0;
-    _CommandQueue = 0;
     _ButtonList = NULL;
     _ButtonListSize = 0;
     _TmilNow = SDL_GetTicks();
+    _Font = NULL;
+    for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
+        _Charset[i] = NULL;
+    }
     // init PNG handling systems
     IMG_Init(IMG_INIT_PNG);
     TTF_Init();
@@ -36,7 +38,7 @@ bool JuicyGUI::LoadCharset() {
     DestroyCharset();
     _CharsetCursor.x = 0;
     _CharsetCursor.y = 0;
-    _Font = TTF_OpenFont(GAME_UI_FONT_TYPE, 16);
+    _Font = TTF_OpenFont(GAME_UI_FONT_TYPE, GAME_UI_FONT_SIZE);
     if (_Font != NULL) {
         char charEnum[] = {0, '\0'};
         char* ptrChar = &charEnum[0];
@@ -179,12 +181,12 @@ JuicyGUI_Action JuicyGUI::UpdateState(JuicyGUI_ID* elementID, JuicyGUI_Action* e
         hostAction |= JUICYGUI_ACTION_RESIZE;
     }
     lastScreenSize = _ScreenSize;
-    _MouseState = 0xff & SDL_GetMouseState(&_MousePos.x, &_MousePos.y);
+    _MouseState = SDL_GetMouseState(&_MousePos.x, &_MousePos.y);
     uint32_t cacheID = 0;
     JuicyGUI_Action cacheAction = JUICYGUI_ACTION_NONE;
     for (uint32_t i = 0; i < _ButtonListSize; i++) {
-        if (_ButtonList[i]->_hostFlag & JUICYGUI_HOSTFLAG_SHOW) {
-            _ButtonList[i]->_action = EvaluateState(_ButtonList[i]->_id, _ButtonList[i]->_type, &(_ButtonList[i]->buttonProperties._rect));
+        if (_ButtonList[i]->_elementFlag & JUICYGUI_ELEMENTFLAG_SHOW) {
+            EvaluateState(_ButtonList[i], _ButtonList[i]->_type);
             if (_ButtonList[i]->_action != JUICYGUI_ACTION_NONE) {
                 cacheID = _ButtonList[i]->_id;
                 cacheAction = _ButtonList[i]->_action;
@@ -193,38 +195,11 @@ JuicyGUI_Action JuicyGUI::UpdateState(JuicyGUI_ID* elementID, JuicyGUI_Action* e
     }
     if (elementID != NULL) *elementID = cacheID;
     if (elementAction != NULL) *elementAction = cacheAction;
-    _CommandQueue = 0;
     return hostAction;
 }
 
-SDL_Texture* JuicyGUI::CreateTexturePNG(const char* path) {
-    SDL_Texture* texture = NULL;
-    SDL_Surface* cache = IMG_Load(path);
-    if (cache == NULL) return texture;
-    texture = SDL_CreateTextureFromSurface(_Renderer, cache);
-    SDL_FreeSurface(cache);
-    return texture;
-}
-
-SDL_Texture* JuicyGUI::CreateTextureTXT(const char* text, SDL_Point* dimensions, TTF_Font* font, JuicyGUI_Color color) {
-    SDL_Color cacheColor;
-    cacheColor.r = color >> 24;
-    cacheColor.g = color >> 16;
-    cacheColor.b = color >> 8;
-    cacheColor.a = color;
-    SDL_Surface* cache = TTF_RenderText_Blended(font, text, cacheColor);
-    if (cache != NULL) {
-        if (dimensions != NULL) TTF_SizeText(font, text, &(dimensions->x), &(dimensions->y));
-        SDL_Texture* texture = NULL;
-        texture = SDL_CreateTextureFromSurface(_Renderer, cache);
-        SDL_FreeSurface(cache);
-        return texture;
-    } else {
-        return NULL;
-    }
-}
-
 void JuicyGUI::DrawBackground(JuicyGUI_Color color) {
+    ElevateRenderer(true);
     SDL_Rect bgRect;
     bgRect.x = 0;
     bgRect.y = 0;
@@ -232,11 +207,12 @@ void JuicyGUI::DrawBackground(JuicyGUI_Color color) {
     bgRect.h = _ScreenSize.y;
     SDL_SetRenderDrawColor(_Renderer, color >> 24, color >> 16, color >> 8, color);
     SDL_RenderFillRect(_Renderer, &bgRect);
+    ElevateRenderer(false);
 }
 
 void JuicyGUI::DrawElements() {
     for (uint32_t i = 0; i < _ButtonListSize; i++) {
-        if (_ButtonList[i]->_hostFlag & JUICYGUI_HOSTFLAG_SHOW) _ButtonList[i]->draw();
+        if (_ButtonList[i]->_elementFlag & JUICYGUI_ELEMENTFLAG_SHOW) _ButtonList[i]->draw();
     }
 }
 
@@ -253,34 +229,118 @@ bool JuicyGUI::EvaluateMouseOver(SDL_Rect* rect) {
     return false;
 }
 
-JuicyGUI_Action JuicyGUI::EvaluateState(JuicyGUI_ID id_command, JuicyGUI_Type, SDL_Rect* rect) {
+void JuicyGUI::EvaluateState(void* ptrElement, JuicyGUI_Type elementType) {
     JuicyGUI_Action state = JUICYGUI_ACTION_NONE;
-    if (EvaluateMouseOver(rect)) { // Mouse over?
-        if (!_CommandCache)  {
-            if (_MouseState & 0x01) {
-                _CommandCache = id_command;
-                state |= JUICYGUI_ACTION_PRESSED;
-            } else {
-                state |= JUICYGUI_ACTION_HOVER;
-            }
-        } else {
-            if (_CommandCache == id_command) {
-                if (_MouseState & 0x01) {
-                    state |= JUICYGUI_ACTION_PRESSED;
-                } else {
-                    _CommandQueue = _CommandCache;
-                    _CommandCache = 0;
-                    state |= JUICYGUI_ACTION_HOVER;
+    JuicyGUI_ID elementID = 0;
+    static JuicyGUI_ID lockedElementID = 0;
+    switch (elementType) {
+        case JUICYGUI_TYPE_ID_BUTTON: {
+                JuicyGUI_Button* ptrButton = NULL;
+                ptrButton = static_cast<JuicyGUI_Button*>(ptrElement);
+                elementID = ptrButton->_id;
+                if (EvaluateMouseOver(&(ptrButton->buttonProperties._rect))) { // Mouse over?
+                    if (!lockedElementID)  {
+                        if (_MouseState & JUICYGUI_CONTROL_ID_LMB) {
+                            lockedElementID = elementID;
+                            state = JUICYGUI_ACTION_PRESSED;
+                        } else {
+                            state = JUICYGUI_ACTION_HOVER;
+                        }
+                    } else {
+                        if (lockedElementID == elementID) {
+                            if (_MouseState & JUICYGUI_CONTROL_ID_LMB) {
+                                state = JUICYGUI_ACTION_PRESSED;
+                            } else {
+                                lockedElementID = 0;
+                                state = JUICYGUI_ACTION_HOVER;
+                            }
+                        }
+                    }
+                } else { // no mouse over
+                    if (lockedElementID == elementID){
+                        if (!(_MouseState & JUICYGUI_CONTROL_ID_LMB)) {
+                            lockedElementID = 0;
+                            state = JUICYGUI_ACTION_NONE;
+                        } else {
+                            state = JUICYGUI_ACTION_PRESSED;
+                        }
+                    }
                 }
+                ptrButton->_action = state;
             }
-        }
-    } else { // no mouse over
-        if (_CommandCache == id_command){
-            if (!(_MouseState & 0x01)) {
-                _CommandCache = 0;
-            }
-        }
+            break;
+        default:
+            break;
     }
-    return state;
 }
+
+
+SDL_Texture* JuicyGUI::CreateTexturePNG(const char* path) {
+    ElevateRenderer(true);
+    SDL_Texture* texture = NULL;
+    SDL_Surface* cache = IMG_Load(path);
+    if (cache == NULL) return texture;
+    texture = SDL_CreateTextureFromSurface(_Renderer, cache);
+    SDL_FreeSurface(cache);
+    ElevateRenderer(false);
+    return texture;
+}
+
+SDL_Surface* JuicyGUI::CreateSurfacePNG(const char* path) {
+    SDL_Surface* surface = IMG_Load(path);
+    return surface;
+}
+
+SDL_Texture* JuicyGUI::CreateTextureTXT(const char* text, SDL_Point* dimensions, TTF_Font* font, JuicyGUI_Color color) {
+    ElevateRenderer(true);
+    SDL_Color cacheColor;
+    cacheColor.r = color >> 24;
+    cacheColor.g = color >> 16;
+    cacheColor.b = color >> 8;
+    cacheColor.a = color;
+    SDL_Surface* cache = TTF_RenderText_Blended(font, text, cacheColor);
+    if (cache != NULL) {
+        if (dimensions != NULL) TTF_SizeText(font, text, &(dimensions->x), &(dimensions->y));
+        SDL_Texture* texture = NULL;
+        texture = SDL_CreateTextureFromSurface(_Renderer, cache);
+        SDL_FreeSurface(cache);
+        ElevateRenderer(false);
+        return texture;
+    } else {
+        ElevateRenderer(false);
+        return NULL;
+    }
+}
+
+SDL_Surface* JuicyGUI::CreateSurfaceTXT(const char* text, SDL_Point* dimensions, TTF_Font* font, JuicyGUI_Color color) {
+    SDL_Color cacheColor;
+    cacheColor.r = color >> 24;
+    cacheColor.g = color >> 16;
+    cacheColor.b = color >> 8;
+    cacheColor.a = color;
+    SDL_Surface* surface = TTF_RenderText_Blended(font, text, cacheColor);
+    if (dimensions != NULL) TTF_SizeText(font, text, &(dimensions->x), &(dimensions->y));
+    return surface;
+}
+
+void JuicyGUI::ElevateRenderer(bool exclusive) {
+    static SDL_Texture* cacheTarget = NULL;
+    static uint8_t cacheColorA = 0xff;
+    static uint8_t cacheColorR = 0xff;
+    static uint8_t cacheColorG = 0xff;
+    static uint8_t cacheColorB = 0xff;
+    static SDL_BlendMode cacheBlendMode = SDL_BLENDMODE_NONE; // is this the correct init value?
+    if (exclusive) {
+        SDL_GetRenderDrawBlendMode(_Renderer, &cacheBlendMode);
+        SDL_GetRenderDrawColor(_Renderer, &cacheColorR, &cacheColorG, &cacheColorB, &cacheColorA);
+        cacheTarget = SDL_GetRenderTarget(_Renderer);
+        SDL_SetRenderTarget(_Renderer, NULL);
+    } else {
+        SDL_SetRenderTarget(_Renderer, cacheTarget);
+        SDL_SetRenderDrawColor(_Renderer, cacheColorR, cacheColorG, cacheColorB, cacheColorA);
+        SDL_SetRenderDrawBlendMode(_Renderer, cacheBlendMode);
+    }
+}
+
+
 

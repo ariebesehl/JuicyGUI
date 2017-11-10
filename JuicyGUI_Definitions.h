@@ -15,7 +15,7 @@
 
 #define GAME_UI_FONT_TYPE "font.ttf"
 #define GAME_UI_FONT_COLOR 0xffff00ff
-#define GAME_UI_FONT_SIZE 70
+#define GAME_UI_FONT_SIZE 16
 
 
 #endif // JUICYGUI_DEFINITIONS_H_INCLUDED

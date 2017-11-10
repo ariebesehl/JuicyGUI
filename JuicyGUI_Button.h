@@ -7,17 +7,20 @@
 
 #include "JuicyGUI.h"
 
-#define NUM_STATES_JUICYGUI_BUTTON 3
+#define JUICYGUI_BUTTON_SUBTYPE_BASIC 0x00000000
+#define JUICYGUI_BUTTON_SUBTYPE_IMAGE 0x00000002
+
+#define JUICYGUI_BUTTON_NUM_STATES 3
 
 typedef struct JuicyGUI_Button_Struct {
     SDL_Rect _rect;
-    JuicyGUI_Color _color[NUM_STATES_JUICYGUI_BUTTON];
-    int _frameSize[NUM_STATES_JUICYGUI_BUTTON];
-    JuicyGUI_Color _frameColor[NUM_STATES_JUICYGUI_BUTTON];
-    const char* _label[NUM_STATES_JUICYGUI_BUTTON];
-    const char* _font[NUM_STATES_JUICYGUI_BUTTON];
-    JuicyGUI_Color _fontColor[NUM_STATES_JUICYGUI_BUTTON];
-    int _fontSize[NUM_STATES_JUICYGUI_BUTTON];
+    JuicyGUI_Color _color[JUICYGUI_BUTTON_NUM_STATES];
+    int _frameSize[JUICYGUI_BUTTON_NUM_STATES];
+    JuicyGUI_Color _frameColor[JUICYGUI_BUTTON_NUM_STATES];
+    const char* _label[JUICYGUI_BUTTON_NUM_STATES];
+    const char* _font[JUICYGUI_BUTTON_NUM_STATES];
+    JuicyGUI_Color _fontColor[JUICYGUI_BUTTON_NUM_STATES];
+    int _fontSize[JUICYGUI_BUTTON_NUM_STATES];
 } JuicyGUI_Button_Struct;
 
 class JuicyGUI_Button {
@@ -38,10 +41,9 @@ class JuicyGUI_Button {
         void clearTextures();
         void createTextures();
         JuicyGUI* _host;
-        uint32_t _hostFlag;
-        uint32_t _flag;
-        SDL_Texture* _textureLabel[NUM_STATES_JUICYGUI_BUTTON];
-        SDL_Point _sizeTextureLabel[NUM_STATES_JUICYGUI_BUTTON];
+        uint32_t _elementFlag;
+        uint32_t _subType;
+        SDL_Texture* _texture[JUICYGUI_BUTTON_NUM_STATES];
 };
 
 

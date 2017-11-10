@@ -12,17 +12,33 @@
 #define JUICYGUI_ACTION_PRESSED 0x00000002
 #define JUICYGUI_ACTION_RESIZE 0x00000004
 
-#define JUICYGUI_HOSTFLAG_SHOW 0x00000001
+#define JUICYGUI_ELEMENTFLAG_SHOW 0x00000001
+#define JUICYGUI_ELEMENTFLAG_DISABLED 0x00000002
 
 #define JUICYGUI_TYPE_ID_BUTTON 0x01
-
-#define JUICYGUI_BUTTON_DISABLED 0x01
-#define JUICYGUI_BUTTON_IMAGE 0x02
 
 #define JUICYGUI_CHARSET_SIZE 256
 #define JUICYGUI_CHARSET_MAX_LENGTH 4096
 #define JUICYGUI_CHARSET_REFERENCE_HEIGHT 65 // 'A'
 #define JUICYGUI_CHARSET_LINE_MARGIN_BIT_SHIFT 3
+
+#define JUICYGUI_CONTROL_ID_LMB 0x00000001
+#define JUICYGUI_CONTROL_ID_MMB 0x00000002
+#define JUICYGUI_CONTROL_ID_RMB 0x00000004
+
+#define JUICYGUI_LOWLVL_DEPTH 32
+#if SDL_BYTEORDER == SDL_LIL_ENDIAN
+    #define JUICYGUI_LOWLVL_MASKR 0xff000000
+    #define JUICYGUI_LOWLVL_MASKG 0x00ff0000
+    #define JUICYGUI_LOWLVL_MASKB 0x0000ff00
+    #define JUICYGUI_LOWLVL_MASKA 0x000000ff
+#else
+    #define JUICYGUI_LOWLVL_MASKR 0x000000ff
+    #define JUICYGUI_LOWLVL_MASKG 0x0000ff00
+    #define JUICYGUI_LOWLVL_MASKB 0x00ff0000
+    #define JUICYGUI_LOWLVL_MASKA 0xff000000
+#endif
+
 
 typedef uint32_t JuicyGUI_Color;
 typedef uint32_t JuicyGUI_ID;
@@ -55,20 +71,21 @@ class JuicyGUI {
         int GetCharsetHeight();
     private:
         bool EvaluateMouseOver(SDL_Rect*);
-        JuicyGUI_Action EvaluateState(JuicyGUI_ID, JuicyGUI_Type, SDL_Rect*);
+        void EvaluateState(void*, JuicyGUI_Type);
         SDL_Texture* CreateTexturePNG(const char*);
+        SDL_Surface* CreateSurfacePNG(const char*);
         SDL_Texture* CreateTextureTXT(const char*, SDL_Point*, TTF_Font*, JuicyGUI_Color color);
+        SDL_Surface* CreateSurfaceTXT(const char*, SDL_Point*, TTF_Font*, JuicyGUI_Color color);
+        void ElevateRenderer(bool);
         SDL_Window* _Window;
         SDL_Renderer* _Renderer;
         SDL_Event* _Event;
-        JuicyGUI_ID _CommandCache;
-        JuicyGUI_ID _CommandQueue;
         JuicyGUI_Time _TmilNow;
         JuicyGUI_Time _TmilLast;
         JuicyGUI_Time _TmilDelta;
         SDL_Point _ScreenSize;
         SDL_Point _MousePos;
-        uint8_t _MouseState;
+        uint32_t _MouseState;
         TTF_Font* _Font;
         SDL_Texture* _Charset[JUICYGUI_CHARSET_SIZE];
         int _CharsetWidth[JUICYGUI_CHARSET_SIZE];
