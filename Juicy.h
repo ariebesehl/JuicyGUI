@@ -6,7 +6,5 @@
 #include "JuicyGUI.h"
 #include "JuicyGUI_Button.h"
 
-#include "../JTE/JTE.h"
-
 
 #endif // JUICY_H_INCLUDED

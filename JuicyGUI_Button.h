@@ -11,6 +11,10 @@
 #define JUICYGUI_BUTTON_SUBTYPE_IMAGE 0x00000002
 
 #define JUICYGUI_BUTTON_NUM_STATES 3
+#define JUICYGUI_BUTTON_TEXTURE_ID_NONE 0
+#define JUICYGUI_BUTTON_TEXTURE_ID_HOVER 1
+#define JUICYGUI_BUTTON_TEXTURE_ID_PRESSED 2
+#define JUICYGUI_BUTTON_TEXTURE_ID_RELEASED JUICYGUI_BUTTON_TEXTURE_ID_HOVER
 
 typedef struct JuicyGUI_Button_Struct {
     SDL_Rect _rect;
@@ -34,11 +38,12 @@ class JuicyGUI_Button {
         void setRect(SDL_Rect*);
     private:
         JuicyGUI_Button_Struct buttonProperties;
+        uint32_t getTextureID();
         void draw();
         JuicyGUI_ID _id;
         JuicyGUI_Type _type;
         JuicyGUI_Action _action;
-        void clearTextures();
+        void destroyTextures();
         void createTextures();
         JuicyGUI* _host;
         uint32_t _elementFlag;

@@ -42,7 +42,7 @@ JuicyGUI_Button::JuicyGUI_Button(JuicyGUI* hostInterface, JuicyGUI_ID id, uint32
 }
 
 JuicyGUI_Button::~JuicyGUI_Button() {
-    clearTextures();
+    destroyTextures();
 }
 
 void JuicyGUI_Button::enable() {
@@ -71,13 +71,32 @@ void JuicyGUI_Button::setRect(SDL_Rect* rect) {
     }
 }
 
+uint32_t JuicyGUI_Button::getTextureID() {
+    uint32_t textureID = JUICYGUI_BUTTON_TEXTURE_ID_NONE;
+    switch (_action) {
+        default:
+        case JUICYGUI_ACTION_NONE:
+            break;
+        case JUICYGUI_ACTION_HOVER:
+            textureID = JUICYGUI_BUTTON_TEXTURE_ID_HOVER;
+            break;
+        case JUICYGUI_ACTION_PRESSED:
+            textureID = JUICYGUI_BUTTON_TEXTURE_ID_PRESSED;
+            break;
+        case JUICYGUI_ACTION_RELEASED:
+            textureID = JUICYGUI_BUTTON_TEXTURE_ID_RELEASED;
+            break;
+    }
+    return textureID;
+}
+
 void JuicyGUI_Button::draw() {
-    if (_texture[_action] != NULL)  {
-        SDL_RenderCopy(_host->_Renderer, _texture[_action], NULL, &buttonProperties._rect);
+    if (_texture[getTextureID()] != NULL)  {
+        SDL_RenderCopy(_host->_Renderer, _texture[getTextureID()], NULL, &buttonProperties._rect);
     }
 }
 
-void JuicyGUI_Button::clearTextures() {
+void JuicyGUI_Button::destroyTextures() {
     for (int i = 0; i < JUICYGUI_BUTTON_NUM_STATES; i++) {
         if (_texture[i] != NULL) {
             SDL_DestroyTexture(_texture[i]);
@@ -87,7 +106,7 @@ void JuicyGUI_Button::clearTextures() {
 }
 
 void JuicyGUI_Button::createTextures() {
-    clearTextures();
+    destroyTextures();
     for (int i = 0; i < JUICYGUI_BUTTON_NUM_STATES; i++) {
         SDL_Surface* cacheDraw = SDL_CreateRGBSurface(0, buttonProperties._rect.w, buttonProperties._rect.h, JUICYGUI_LOWLVL_DEPTH, JUICYGUI_LOWLVL_MASKR, JUICYGUI_LOWLVL_MASKG, JUICYGUI_LOWLVL_MASKB, JUICYGUI_LOWLVL_MASKA);
         SDL_Surface* cacheContent = NULL;

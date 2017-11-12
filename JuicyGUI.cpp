@@ -1,7 +1,6 @@
 #include "JuicyGUI.h"
 #include "JuicyGUI_Definitions.h"
 #include "JuicyGUI_Button.h"
-#include <iostream>
 
 
 
@@ -50,9 +49,6 @@ bool JuicyGUI::LoadCharset() {
         _CharsetLineMargin = _CharsetHeight >> JUICYGUI_CHARSET_LINE_MARGIN_BIT_SHIFT;
         return true;
     } else {
-        for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-            _Charset[i] = NULL;
-        }
         DestroyCharset();
         return false;
     }
@@ -252,7 +248,7 @@ void JuicyGUI::EvaluateState(void* ptrElement, JuicyGUI_Type elementType) {
                                 state = JUICYGUI_ACTION_PRESSED;
                             } else {
                                 lockedElementID = 0;
-                                state = JUICYGUI_ACTION_HOVER;
+                                state = JUICYGUI_ACTION_RELEASED;
                             }
                         }
                     }
@@ -264,6 +260,8 @@ void JuicyGUI::EvaluateState(void* ptrElement, JuicyGUI_Type elementType) {
                         } else {
                             state = JUICYGUI_ACTION_PRESSED;
                         }
+                    } else {
+                        state= JUICYGUI_ACTION_NONE;
                     }
                 }
                 ptrButton->_action = state;

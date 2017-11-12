@@ -5,12 +5,11 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 
-//#define GAME_UI_BACKGROUND_COLOR 0xfffac1ff
-
 #define JUICYGUI_ACTION_NONE 0x00000000
 #define JUICYGUI_ACTION_HOVER 0x00000001
 #define JUICYGUI_ACTION_PRESSED 0x00000002
-#define JUICYGUI_ACTION_RESIZE 0x00000004
+#define JUICYGUI_ACTION_RELEASED 0x00000004
+#define JUICYGUI_ACTION_RESIZE 0x00000008
 
 #define JUICYGUI_ELEMENTFLAG_SHOW 0x00000001
 #define JUICYGUI_ELEMENTFLAG_DISABLED 0x00000002
@@ -69,6 +68,7 @@ class JuicyGUI {
         void DestroyCharset();
         SDL_Point* GetPrintCursor();
         int GetCharsetHeight();
+        SDL_Renderer* GetRenderer() {return _Renderer;};
     private:
         bool EvaluateMouseOver(SDL_Rect*);
         void EvaluateState(void*, JuicyGUI_Type);
