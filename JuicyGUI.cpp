@@ -201,7 +201,8 @@ void JuicyGUI::DrawBackground(JuicyGUI_Color color) {
     bgRect.y = 0;
     bgRect.w = _ScreenSize.x;
     bgRect.h = _ScreenSize.y;
-    SDL_SetRenderDrawColor(_Renderer, color >> 24, color >> 16, color >> 8, color);
+    SDL_SetRenderDrawBlendMode(_Renderer, SDL_BLENDMODE_BLEND);
+    SDL_SetRenderDrawColor(_Renderer, (color >> 24) & 0xff, (color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
     SDL_RenderFillRect(_Renderer, &bgRect);
     ElevateRenderer(false);
 }
