@@ -28,12 +28,12 @@ class JuicyGUI_Element {
         uint32_t setAction(uint32_t iAction) {_action = iAction; return getAction();};
         uint32_t attachAction(uint32_t iAction) {_action |= iAction; return getAction();};
         uint32_t detachAction(uint32_t iAction) {_action &= ~iAction; return getAction();};
-        void show() {attachAction(JUICYGUI_ELEMENTFLAG_SHOW);};
-        void hide() {detachAction(JUICYGUI_ELEMENTFLAG_SHOW);};
-        void show(bool iShow) { if(iShow) detachAction(JUICYGUI_ELEMENTFLAG_SHOW); else attachAction(JUICYGUI_ELEMENTFLAG_SHOW);};
-        void enable() {detachAction(JUICYGUI_ELEMENTFLAG_DISABLED);};
-        void disable() {attachAction(JUICYGUI_ELEMENTFLAG_DISABLED);};
-        void enable(bool iEnabled) { if(iEnabled) detachAction(JUICYGUI_ELEMENTFLAG_DISABLED); else attachAction(JUICYGUI_ELEMENTFLAG_DISABLED);};
+        void show() {attachFlag(JUICYGUI_ELEMENTFLAG_SHOW);};
+        void hide() {detachFlag(JUICYGUI_ELEMENTFLAG_SHOW);};
+        void show(bool iShow) {if(iShow) attachFlag(JUICYGUI_ELEMENTFLAG_SHOW); else detachFlag(JUICYGUI_ELEMENTFLAG_SHOW);};
+        void enable() {detachFlag(JUICYGUI_ELEMENTFLAG_DISABLED);};
+        void disable() {attachFlag(JUICYGUI_ELEMENTFLAG_DISABLED);};
+        void enable(bool iEnabled) { if(iEnabled) detachFlag(JUICYGUI_ELEMENTFLAG_DISABLED); else attachFlag(JUICYGUI_ELEMENTFLAG_DISABLED);};
         const SDL_Rect* getRect(void) {return &_rect;};
         bool setRect(const SDL_Rect* iRect);
         void getPos(SDL_Point* oPosition) {if (oPosition != NULL) oPosition->x = _rect.x; oPosition->y = _rect.y;};

@@ -33,6 +33,8 @@ class JuicyGUI {
         void DrawBackground(JuicyGUI_Color iColor);
         void DrawElements(void);
         void GetScreenSize(SDL_Point* oSize);
+        int GetScreenWidth(void) {return Element.getWidth();};
+        int GetScreenHeight(void) {return Element.getHeight();};
         int GetScreenSizeBigger(void);
         int GetScreenSizeSmaller(void);
         JuicyGUI_Time GetTimeDelta(void);
