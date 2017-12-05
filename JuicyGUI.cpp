@@ -1,223 +1,137 @@
-#include "JuicyGUI.h"
-#include "JuicyGUI_Definitions.h"
-#include "JuicyGUI_Button.h"
+#include <iostream>
 
+#include "Juicy_SDL.h"
+#include "JuicyGUI_Definitions.h"
+
+#include "JuicyGUI.h"
+#include "JuicyGUI_Box.h"
+#include "JuicyGUI_Button.h"
+#include "JuicyGUI_Charset.h"
+#include "JuicyGUI_Element.h"
 
 
 JuicyGUI::JuicyGUI(SDL_Window* Window, SDL_Renderer* Renderer, SDL_Event* Event) {
-    // init GUI variables
     _Window = Window;
     _Renderer = Renderer;
     _Event = Event;
-    _ButtonList = NULL;
-    _ButtonListSize = 0;
+    _ElementList = NULL;
+    _ElementListSize = 0;
+    Element.setCredentials(this, this, JUICYGUI_LOWLVL_ROOT_ID_NUM, JUICYGUI_TYPE_ID_GUI);
+    SDL_Rect initScreen;
+    initScreen.x = JUICYGUI_LOWLVL_DEFAULT_SCREEN_ORIGIN_X;
+    initScreen.y = JUICYGUI_LOWLVL_DEFAULT_SCREEN_ORIGIN_Y;
+    SDL_GetWindowSize(_Window, &initScreen.w, &initScreen.h);
+    Element.setRect(&initScreen);
     _TmilNow = SDL_GetTicks();
-    _Font = NULL;
-    for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-        _Charset[i] = NULL;
-    }
-    // init PNG handling systems
     IMG_Init(IMG_INIT_PNG);
     TTF_Init();
-    LoadCharset();
-    UpdateState(NULL, NULL);
 }
 
 JuicyGUI::~JuicyGUI() {
-    for (uint32_t i = 0; i < _ButtonListSize; i++) {
-        delete _ButtonList[i];
+    for (uint32_t i = 0; i < _ElementListSize; i++) {
+        delete _ElementList[i];
     }
-    delete _ButtonList;
-    DestroyCharset();
+    delete[] _ElementList;
     TTF_Quit();
     IMG_Quit();
 }
 
-bool JuicyGUI::LoadCharset() {
-    DestroyCharset();
-    _CharsetCursor.x = 0;
-    _CharsetCursor.y = 0;
-    _Font = TTF_OpenFont(GAME_UI_FONT_TYPE, GAME_UI_FONT_SIZE);
-    if (_Font != NULL) {
-        char charEnum[] = {0, '\0'};
-        char* ptrChar = &charEnum[0];
-        for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-            TTF_SizeText(_Font, ptrChar, &_CharsetWidth[i], (i != JUICYGUI_CHARSET_REFERENCE_HEIGHT) ? NULL : &_CharsetHeight);
-            _Charset[i] = CreateTextureTXT(ptrChar, NULL, _Font, GAME_UI_FONT_COLOR);
-            (*ptrChar)++;
-        }
-        _CharsetLineMargin = _CharsetHeight >> JUICYGUI_CHARSET_LINE_MARGIN_BIT_SHIFT;
-        return true;
-    } else {
-        DestroyCharset();
-        return false;
-    }
-}
-
-void JuicyGUI::DestroyCharset() {
-    _CharsetLineMargin = 0;
-    _CharsetHeight = 0;
-    for (int i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-        _CharsetWidth[i] = 0;
-        if (_Charset[i] != NULL) {
-            SDL_DestroyTexture(_Charset[i]);
-            _Charset[i] = NULL;
-        }
-    }
-    if (_Font != NULL) TTF_CloseFont(_Font);
-}
-
-
-void JuicyGUI::PrintTXT(const char* text, SDL_Point* textPosition) {
-    if (text != NULL) {
-        SDL_Rect drawRect;
-        drawRect.h = _CharsetHeight;
-        SetPrintCursor(textPosition);
-        int i = 0;
-        while (true) {
-            if (text[i] != '\0' && i < JUICYGUI_CHARSET_MAX_LENGTH) {
-                switch (text[i]) {
-                    default:
-                        if (_CharsetWidth[(uint8_t)*(text + i)]) {
-                            drawRect.x = _CharsetCursor.x;
-                            drawRect.y = _CharsetCursor.y;
-                            drawRect.w = _CharsetWidth[(uint8_t)*(text + i)];
-                            SDL_RenderCopy(_Renderer, _Charset[(uint8_t)*(text + i)], NULL, &drawRect);
-                            _CharsetCursor.x += drawRect.w;
-                        }
-                        break;
+bool JuicyGUI::RegisterElement(JuicyGUI_Element* iElement) {
+    if (iElement != NULL) {
+        if (iElement->getHost() == this && iElement->getOwner() != NULL) {
+            if (!(iElement->isRoot())) {
+                JuicyGUI_Element** ptrCache = new JuicyGUI_Element*[_ElementListSize + 1];
+                for (uint32_t i = 0; i < _ElementListSize; i++) {
+                    ptrCache[i] = *(_ElementList + i);
                 }
-            } else {
-                return;
+                ptrCache[_ElementListSize] = iElement;
+                delete[] _ElementList;
+                _ElementList = ptrCache;
+                _ElementListSize++;
+                return true;
             }
-            i++;
         }
     }
+    return false;
 }
-
-void JuicyGUI::PrintLnTXT(const char* text, SDL_Point* textPosition) {
-    if (text != NULL) {
-        SDL_Rect drawRect;
-        drawRect.h = _CharsetHeight;
-        SetPrintCursor(textPosition);
-        int cacheCursorNL = _CharsetCursor.x;
-        int i = 0;
-        while (true) {
-            if (text[i] != '\0' && i < JUICYGUI_CHARSET_MAX_LENGTH) {
-                switch (text[i]) {
-                    default:
-                        if (_CharsetWidth[(uint8_t)*(text + i)]) {
-                            drawRect.x = _CharsetCursor.x;
-                            drawRect.y = _CharsetCursor.y;
-                            drawRect.w = _CharsetWidth[(uint8_t)*(text + i)];
-                            SDL_RenderCopy(_Renderer, _Charset[(uint8_t)*(text + i)], NULL, &drawRect);
-                            _CharsetCursor.x += drawRect.w;
-                        }
-                        break;
-                }
-            } else {
-                _CharsetCursor.x = cacheCursorNL;
-                _CharsetCursor.y += _CharsetHeight + _CharsetLineMargin;
-                return;
-            }
-            i++;
-        }
-    }
-}
-
-
-void JuicyGUI::SetPrintCursor(SDL_Point* cursorPos) {
-    if (cursorPos != NULL) {
-        _CharsetCursor.x = cursorPos->x;
-        _CharsetCursor.y = cursorPos->y;
-    }
-}
-
-SDL_Point* JuicyGUI::GetPrintCursor() {
-    return &_CharsetCursor;
-}
-
-int JuicyGUI::GetCharsetHeight() {
-    return _CharsetHeight;
-}
-
-
-
-bool JuicyGUI::RegisterElement(void* ptrElement, JuicyGUI_Type elementType) {
-    switch (elementType) {
-        case JUICYGUI_TYPE_ID_BUTTON: {
-                JuicyGUI_Button* ptrButton = NULL;
-                ptrButton = static_cast<JuicyGUI_Button*>(ptrElement);
-                if (ptrButton != NULL) {
-                    JuicyGUI_Button** ptrCache = new JuicyGUI_Button*[_ButtonListSize + 1];
-                    for (uint32_t i = 0; i < _ButtonListSize; i++) {
-                        ptrCache[i] = *(_ButtonList + i);
-                    }
-                    ptrCache[_ButtonListSize] = ptrButton;
-                    delete _ButtonList;
-                    _ButtonList = ptrCache;
-                    _ButtonListSize++;
-                }
-            }
-            return true;
-        default:
-            return false;
-    }
-}
-
 
 JuicyGUI_Action JuicyGUI::UpdateState(JuicyGUI_ID* elementID, JuicyGUI_Action* elementAction) {
     _TmilLast = _TmilNow;
     _TmilNow = SDL_GetTicks();
     _TmilDelta = _TmilNow - _TmilLast;
-    JuicyGUI_Action hostAction = JUICYGUI_ACTION_NONE;
-    static SDL_Point lastScreenSize;
-    SDL_GetWindowSize(_Window, &_ScreenSize.x, &_ScreenSize.y);
-    if (lastScreenSize.x != _ScreenSize.x || lastScreenSize.y != _ScreenSize.y) {
-        hostAction |= JUICYGUI_ACTION_RESIZE;
+    Element.setAction(JUICYGUI_ACTION_NONE);
+    SDL_Point lastScreenSize;
+    SDL_Point currentScreenSize;
+    Element.getSize(&lastScreenSize);
+    SDL_GetWindowSize(_Window, &currentScreenSize.x, &currentScreenSize.y);
+    if (currentScreenSize != lastScreenSize) {
+        Element.setSize(&currentScreenSize);
+        Element.attachAction(JUICYGUI_ACTION_RESIZE);
     }
-    lastScreenSize = _ScreenSize;
     _MouseState = SDL_GetMouseState(&_MousePos.x, &_MousePos.y);
     uint32_t cacheID = 0;
     JuicyGUI_Action cacheAction = JUICYGUI_ACTION_NONE;
-    for (uint32_t i = 0; i < _ButtonListSize; i++) {
-        if (_ButtonList[i]->_elementFlag & JUICYGUI_ELEMENTFLAG_SHOW) {
-            EvaluateState(_ButtonList[i], _ButtonList[i]->_type);
-            if (_ButtonList[i]->_action != JUICYGUI_ACTION_NONE) {
-                cacheID = _ButtonList[i]->_id;
-                cacheAction = _ButtonList[i]->_action;
-            }
+    for (uint32_t i = 0; i < _ElementListSize; i++) {
+        EvaluateState(_ElementList[i]);
+        if (_ElementList[i]->getAction() != JUICYGUI_ACTION_NONE) {
+            cacheID = _ElementList[i]->getID();
+            cacheAction = _ElementList[i]->getAction();
         }
     }
     if (elementID != NULL) *elementID = cacheID;
     if (elementAction != NULL) *elementAction = cacheAction;
-    return hostAction;
+    return Element.getAction();
+}
+
+void JuicyGUI::GetScreenSize(SDL_Point* oSize) {
+    if (oSize != NULL) Element.getSize(oSize);
+}
+
+int JuicyGUI::GetScreenSizeBigger(void) {
+    return (Element.getWidth() > Element.getHeight()) ? Element.getWidth() : Element.getHeight();
+}
+
+int JuicyGUI::GetScreenSizeSmaller(void) {
+    return (Element.getWidth() > Element.getHeight()) ? Element.getHeight() : Element.getWidth();
 }
 
 void JuicyGUI::DrawBackground(JuicyGUI_Color color) {
     ElevateRenderer(true);
-    SDL_Rect bgRect;
-    bgRect.x = 0;
-    bgRect.y = 0;
-    bgRect.w = _ScreenSize.x;
-    bgRect.h = _ScreenSize.y;
     SDL_SetRenderDrawBlendMode(_Renderer, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(_Renderer, (color >> 24) & 0xff, (color >> 16) & 0xff, (color >> 8) & 0xff, color & 0xff);
-    SDL_RenderFillRect(_Renderer, &bgRect);
+    SDL_RenderFillRect(_Renderer, Element.getRect());
     ElevateRenderer(false);
 }
 
 void JuicyGUI::DrawElements() {
-    for (uint32_t i = 0; i < _ButtonListSize; i++) {
-        if (_ButtonList[i]->_elementFlag & JUICYGUI_ELEMENTFLAG_SHOW) _ButtonList[i]->draw();
+    ElevateRenderer(true);
+    for (uint32_t i = 0; i < _ElementListSize; i++) {
+        switch (_ElementList[i]->getType()) {
+            case JUICYGUI_TYPE_ID_NONE:
+                break;
+            case JUICYGUI_TYPE_ID_GUI:
+                break;
+            case JUICYGUI_TYPE_ID_BOX:
+                static_cast<JuicyGUI_Box*>(_ElementList[i]->getOwner())->draw();
+                break;
+            case JUICYGUI_TYPE_ID_BUTTON:
+                static_cast<JuicyGUI_Button*>(_ElementList[i]->getOwner())->draw();
+                break;
+            case JUICYGUI_TYPE_ID_CHARSET:
+                static_cast<JuicyGUI_Charset*>(_ElementList[i]->getOwner())->draw();
+                break;
+            default:
+                break;
+        }
     }
+    ElevateRenderer(false);
 }
 
-bool JuicyGUI::EvaluateMouseOver(SDL_Rect* rect) {
-    if (_MousePos.y >= rect->y) {
-        if (_MousePos.y <= rect->y + rect->h) {
-            if (_MousePos.x >= rect->x) {
-                if (_MousePos.x <= rect->x + rect->w) {
+bool JuicyGUI::EvaluateMouseOver(const SDL_Rect* iRect) {
+    if (_MousePos.y >= iRect->y) {
+        if (_MousePos.y <= iRect->y + iRect->h) {
+            if (_MousePos.x >= iRect->x) {
+                if (_MousePos.x <= iRect->x + iRect->w) {
                     return true;
                 }
             }
@@ -226,46 +140,46 @@ bool JuicyGUI::EvaluateMouseOver(SDL_Rect* rect) {
     return false;
 }
 
-void JuicyGUI::EvaluateState(void* ptrElement, JuicyGUI_Type elementType) {
+void JuicyGUI::EvaluateState(JuicyGUI_Element* iElement) {
     JuicyGUI_Action state = JUICYGUI_ACTION_NONE;
     JuicyGUI_ID elementID = 0;
     static JuicyGUI_ID lockedElementID = 0;
-    switch (elementType) {
+    switch (iElement->getType()) {
         case JUICYGUI_TYPE_ID_BUTTON: {
-                JuicyGUI_Button* ptrButton = NULL;
-                ptrButton = static_cast<JuicyGUI_Button*>(ptrElement);
-                elementID = ptrButton->_id;
-                if (EvaluateMouseOver(&(ptrButton->buttonProperties._rect))) { // Mouse over?
-                    if (!lockedElementID)  {
-                        if (_MouseState & JUICYGUI_CONTROL_ID_LMB) {
-                            lockedElementID = elementID;
-                            state = JUICYGUI_ACTION_PRESSED;
-                        } else {
-                            state = JUICYGUI_ACTION_HOVER;
-                        }
-                    } else {
-                        if (lockedElementID == elementID) {
+                elementID = iElement->getID();
+                if (!(iElement->getFlag() & JUICYGUI_ELEMENTFLAG_DISABLED) && (iElement->getFlag() & JUICYGUI_ELEMENTFLAG_SHOW)) {
+                    if (EvaluateMouseOver(iElement->getRect())) { // Mouse over?
+                        if (!lockedElementID)  {
                             if (_MouseState & JUICYGUI_CONTROL_ID_LMB) {
+                                lockedElementID = elementID;
                                 state = JUICYGUI_ACTION_PRESSED;
                             } else {
-                                lockedElementID = 0;
-                                state = JUICYGUI_ACTION_RELEASED;
+                                state = JUICYGUI_ACTION_HOVER;
+                            }
+                        } else {
+                            if (lockedElementID == elementID) {
+                                if (_MouseState & JUICYGUI_CONTROL_ID_LMB) {
+                                    state = JUICYGUI_ACTION_PRESSED;
+                                } else {
+                                    lockedElementID = 0;
+                                    state = JUICYGUI_ACTION_RELEASED;
+                                }
                             }
                         }
-                    }
-                } else { // no mouse over
-                    if (lockedElementID == elementID){
-                        if (!(_MouseState & JUICYGUI_CONTROL_ID_LMB)) {
-                            lockedElementID = 0;
-                            state = JUICYGUI_ACTION_NONE;
+                    } else { // no mouse over
+                        if (lockedElementID == elementID){
+                            if (!(_MouseState & JUICYGUI_CONTROL_ID_LMB)) {
+                                lockedElementID = 0;
+                                state = JUICYGUI_ACTION_NONE;
+                            } else {
+                                state = JUICYGUI_ACTION_PRESSED;
+                            }
                         } else {
-                            state = JUICYGUI_ACTION_PRESSED;
+                            state = JUICYGUI_ACTION_NONE;
                         }
-                    } else {
-                        state= JUICYGUI_ACTION_NONE;
                     }
                 }
-                ptrButton->_action = state;
+                iElement->setAction(state);
             }
             break;
         default:
@@ -273,11 +187,50 @@ void JuicyGUI::EvaluateState(void* ptrElement, JuicyGUI_Type elementType) {
     }
 }
 
+void JuicyGUI::RenderTexture(SDL_Texture* iTexture, const SDL_Rect* iRect) {
+    if (iTexture != NULL) {
+        ElevateRenderer(true);
+        SDL_RenderCopy(_Renderer, iTexture, NULL, (iRect != NULL) ? iRect : Element.getRect());
+        ElevateRenderer(false);
+    }
+}
 
-SDL_Texture* JuicyGUI::CreateTexturePNG(const char* path) {
+void JuicyGUI::RenderTextureVirtual(SDL_Texture* iTexture, SDL_Texture* iScreen, const SDL_Rect* iRect) {
+    if (iTexture != NULL && iScreen != NULL) {
+        ElevateRenderer(true);
+        SDL_SetRenderTarget(_Renderer, iScreen);
+        SDL_RenderCopy(_Renderer, iTexture, NULL, iRect);
+        ElevateRenderer(false);
+    }
+}
+
+void JuicyGUI::ClearVirtualScreen(SDL_Texture* iScreen) {
+    if (iScreen != NULL) {
+        ElevateRenderer(true);
+        SDL_SetRenderTarget(_Renderer, iScreen);
+        SDL_SetRenderDrawBlendMode(_Renderer, SDL_BLENDMODE_NONE);
+        SDL_SetRenderDrawColor(_Renderer, 0, 0, 0, 0);
+        SDL_RenderFillRect(_Renderer, NULL);
+        ElevateRenderer(false);
+    }
+}
+
+SDL_Texture* JuicyGUI::CreateTextureFill(const SDL_Point* iDimensions, JuicyGUI_Color iColor) {
     ElevateRenderer(true);
     SDL_Texture* texture = NULL;
-    SDL_Surface* cache = IMG_Load(path);
+    SDL_Surface* cacheDraw = SDL_CreateRGBSurface(0, iDimensions->x, iDimensions->y, JUICYGUI_LOWLVL_DEPTH, JUICYGUI_LOWLVL_MASKR, JUICYGUI_LOWLVL_MASKG, JUICYGUI_LOWLVL_MASKB, JUICYGUI_LOWLVL_MASKA);
+    SDL_FillRect(cacheDraw, NULL, iColor);
+    texture = SDL_CreateTextureFromSurface(_Renderer, cacheDraw);
+    SDL_FreeSurface(cacheDraw);
+    ElevateRenderer(false);
+    return texture;
+}
+
+
+SDL_Texture* JuicyGUI::CreateTexturePNG(const char* iFilepath) {
+    ElevateRenderer(true);
+    SDL_Texture* texture = NULL;
+    SDL_Surface* cache = IMG_Load(iFilepath);
     if (cache == NULL) return texture;
     texture = SDL_CreateTextureFromSurface(_Renderer, cache);
     SDL_FreeSurface(cache);
@@ -285,21 +238,16 @@ SDL_Texture* JuicyGUI::CreateTexturePNG(const char* path) {
     return texture;
 }
 
-SDL_Surface* JuicyGUI::CreateSurfacePNG(const char* path) {
-    SDL_Surface* surface = IMG_Load(path);
-    return surface;
-}
-
-SDL_Texture* JuicyGUI::CreateTextureTXT(const char* text, SDL_Point* dimensions, TTF_Font* font, JuicyGUI_Color color) {
+SDL_Texture* JuicyGUI::CreateTextureTXT(const char* iText, SDL_Point* oDimensions, TTF_Font* iFont, JuicyGUI_Color iColor) {
     ElevateRenderer(true);
     SDL_Color cacheColor;
-    cacheColor.r = color >> 24;
-    cacheColor.g = color >> 16;
-    cacheColor.b = color >> 8;
-    cacheColor.a = color;
-    SDL_Surface* cache = TTF_RenderText_Blended(font, text, cacheColor);
+    cacheColor.r = iColor >> 24;
+    cacheColor.g = iColor >> 16;
+    cacheColor.b = iColor >> 8;
+    cacheColor.a = iColor;
+    SDL_Surface* cache = TTF_RenderText_Blended(iFont, iText, cacheColor);
     if (cache != NULL) {
-        if (dimensions != NULL) TTF_SizeText(font, text, &(dimensions->x), &(dimensions->y));
+        if (oDimensions != NULL) TTF_SizeText(iFont, iText, &(oDimensions->x), &(oDimensions->y));
         SDL_Texture* texture = NULL;
         texture = SDL_CreateTextureFromSurface(_Renderer, cache);
         SDL_FreeSurface(cache);
@@ -311,14 +259,39 @@ SDL_Texture* JuicyGUI::CreateTextureTXT(const char* text, SDL_Point* dimensions,
     }
 }
 
-SDL_Surface* JuicyGUI::CreateSurfaceTXT(const char* text, SDL_Point* dimensions, TTF_Font* font, JuicyGUI_Color color) {
+SDL_Texture* JuicyGUI::CreateVirtualScreen(void) {
+    ElevateRenderer(true);
+    SDL_Point screenSize;
+    Element.getSize(&screenSize);
+    SDL_Texture* _virtualScreen = SDL_CreateTexture(_Renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, screenSize.x, screenSize.y);
+    SDL_SetTextureBlendMode(_virtualScreen, SDL_BLENDMODE_BLEND);
+    ElevateRenderer(false);
+    return _virtualScreen;
+}
+
+
+SDL_Surface* JuicyGUI::CreateSurfaceFill(const SDL_Point* iDimensions, JuicyGUI_Color iColor) {
+    ElevateRenderer(true);
+    SDL_Surface* newSurface = SDL_CreateRGBSurface(0, iDimensions->x, iDimensions->y, JUICYGUI_LOWLVL_DEPTH, JUICYGUI_LOWLVL_MASKR, JUICYGUI_LOWLVL_MASKG, JUICYGUI_LOWLVL_MASKB, JUICYGUI_LOWLVL_MASKA);
+    SDL_FillRect(newSurface, NULL, iColor);
+    ElevateRenderer(false);
+    return newSurface;
+}
+
+
+SDL_Surface* JuicyGUI::CreateSurfacePNG(const char* iFilepath) {
+    SDL_Surface* surface = IMG_Load(iFilepath);
+    return surface;
+}
+
+SDL_Surface* JuicyGUI::CreateSurfaceTXT(const char* iText, SDL_Point* oDimensions, TTF_Font* iFont, JuicyGUI_Color iColor) {
     SDL_Color cacheColor;
-    cacheColor.r = color >> 24;
-    cacheColor.g = color >> 16;
-    cacheColor.b = color >> 8;
-    cacheColor.a = color;
-    SDL_Surface* surface = TTF_RenderText_Blended(font, text, cacheColor);
-    if (dimensions != NULL) TTF_SizeText(font, text, &(dimensions->x), &(dimensions->y));
+    cacheColor.r = iColor >> 24;
+    cacheColor.g = iColor >> 16;
+    cacheColor.b = iColor >> 8;
+    cacheColor.a = iColor;
+    SDL_Surface* surface = TTF_RenderText_Blended(iFont, iText, cacheColor);
+    if (oDimensions != NULL) TTF_SizeText(iFont, iText, &(oDimensions->x), &(oDimensions->y));
     return surface;
 }
 
@@ -340,6 +313,4 @@ void JuicyGUI::ElevateRenderer(bool exclusive) {
         SDL_SetRenderDrawBlendMode(_Renderer, cacheBlendMode);
     }
 }
-
-
 

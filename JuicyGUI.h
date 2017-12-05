@@ -5,39 +5,8 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 
-#define JUICYGUI_ACTION_NONE 0x00000000
-#define JUICYGUI_ACTION_HOVER 0x00000001
-#define JUICYGUI_ACTION_PRESSED 0x00000002
-#define JUICYGUI_ACTION_RELEASED 0x00000004
-#define JUICYGUI_ACTION_RESIZE 0x00000008
-
-#define JUICYGUI_ELEMENTFLAG_SHOW 0x00000001
-#define JUICYGUI_ELEMENTFLAG_DISABLED 0x00000002
-
-#define JUICYGUI_TYPE_ID_BUTTON 0x01
-
-#define JUICYGUI_CHARSET_SIZE 256
-#define JUICYGUI_CHARSET_MAX_LENGTH 4096
-#define JUICYGUI_CHARSET_REFERENCE_HEIGHT 65 // 'A'
-#define JUICYGUI_CHARSET_LINE_MARGIN_BIT_SHIFT 3
-
-#define JUICYGUI_CONTROL_ID_LMB 0x00000001
-#define JUICYGUI_CONTROL_ID_MMB 0x00000002
-#define JUICYGUI_CONTROL_ID_RMB 0x00000004
-
-#define JUICYGUI_LOWLVL_DEPTH 32
-#if SDL_BYTEORDER == SDL_LIL_ENDIAN
-    #define JUICYGUI_LOWLVL_MASKR 0xff000000
-    #define JUICYGUI_LOWLVL_MASKG 0x00ff0000
-    #define JUICYGUI_LOWLVL_MASKB 0x0000ff00
-    #define JUICYGUI_LOWLVL_MASKA 0x000000ff
-#else
-    #define JUICYGUI_LOWLVL_MASKR 0x000000ff
-    #define JUICYGUI_LOWLVL_MASKG 0x0000ff00
-    #define JUICYGUI_LOWLVL_MASKB 0x00ff0000
-    #define JUICYGUI_LOWLVL_MASKA 0xff000000
-#endif
-
+#include "JuicyGUI_Definitions.h"
+#include "JuicyGUI_Element.h"
 
 typedef uint32_t JuicyGUI_Color;
 typedef uint32_t JuicyGUI_ID;
@@ -45,55 +14,56 @@ typedef uint32_t JuicyGUI_Type;
 typedef uint32_t JuicyGUI_Action;
 typedef uint32_t JuicyGUI_Time;
 
+class JuicyGUI_Box;
 class JuicyGUI_Button;
+class JuicyGUI_Charset;
+
 
 class JuicyGUI {
+    friend class JuicyGUI_Box;
     friend class JuicyGUI_Button;
+    friend class JuicyGUI_Charset;
+    friend class JuicyGUI_Element;
     friend class JTE;
     public:
-        JuicyGUI(SDL_Window*, SDL_Renderer*, SDL_Event*);
-        ~JuicyGUI();
-        JuicyGUI_Action UpdateState(JuicyGUI_ID*, JuicyGUI_Action*);
-        bool RegisterElement(void*, JuicyGUI_Type);
-        void DrawBackground(JuicyGUI_Color);
-        void DrawElements();
-        SDL_Point* GetScreenSize() {return &_ScreenSize;};
-        int GetScreenSizeBigger() {return (_ScreenSize.x > _ScreenSize.y) ? _ScreenSize.x : _ScreenSize.y;};
-        int GetScreenSizeSmaller() {return (_ScreenSize.x > _ScreenSize.y) ? _ScreenSize.y : _ScreenSize.x;};
-        void PrintTXT(const char*, SDL_Point*);
-        void PrintLnTXT(const char*, SDL_Point*);
-        void SetPrintCursor(SDL_Point*);
-        JuicyGUI_Time GetTimeDelta();
-        bool LoadCharset();
-        void DestroyCharset();
-        SDL_Point* GetPrintCursor();
-        int GetCharsetHeight();
-        SDL_Renderer* GetRenderer() {return _Renderer;};
+        JuicyGUI(SDL_Window* iWindow, SDL_Renderer* iRenderer, SDL_Event* iEvent);
+        ~JuicyGUI(void);
+        JuicyGUI_Action UpdateState(JuicyGUI_ID* oElementID, JuicyGUI_Action* oActionID);
+        bool RegisterElementOLD(void* iPtrElement, JuicyGUI_Type iTypeElement);
+        void DrawBackground(JuicyGUI_Color iColor);
+        void DrawElements(void);
+        void GetScreenSize(SDL_Point* oSize);
+        int GetScreenSizeBigger(void);
+        int GetScreenSizeSmaller(void);
+        JuicyGUI_Time GetTimeDelta(void);
+        SDL_Renderer* GetRenderer(void) {return _Renderer;};
     private:
-        bool EvaluateMouseOver(SDL_Rect*);
-        void EvaluateState(void*, JuicyGUI_Type);
-        SDL_Texture* CreateTexturePNG(const char*);
-        SDL_Surface* CreateSurfacePNG(const char*);
-        SDL_Texture* CreateTextureTXT(const char*, SDL_Point*, TTF_Font*, JuicyGUI_Color color);
-        SDL_Surface* CreateSurfaceTXT(const char*, SDL_Point*, TTF_Font*, JuicyGUI_Color color);
-        void ElevateRenderer(bool);
+        JuicyGUI_Element Element;
+        bool RegisterElement(JuicyGUI_Element* iElement);
+        bool EvaluateMouseOver(const SDL_Rect* iRect);
+        void EvaluateState(JuicyGUI_Element* iElement);
+        void RenderTexture(SDL_Texture* iTexture, const SDL_Rect* iRect);
+        void RenderTextureVirtual(SDL_Texture* iTexture, SDL_Texture* iScreen, const SDL_Rect* iRect);
+        void ClearVirtualScreen(SDL_Texture* iScreen);
+        SDL_Texture* CreateTextureFill(const SDL_Point* iDimensions, JuicyGUI_Color iColor);
+        SDL_Texture* CreateTextureSurface(SDL_Surface* iSurface) {if (iSurface != NULL) return SDL_CreateTextureFromSurface(_Renderer, iSurface); else return NULL;};
+        SDL_Texture* CreateTexturePNG(const char* iFilepath);
+        SDL_Texture* CreateTextureTXT(const char* iText, SDL_Point* oDimensions, TTF_Font* iFont, JuicyGUI_Color iColor);
+        SDL_Texture* CreateVirtualScreen(void);
+        SDL_Surface* CreateSurfaceFill(const SDL_Point* iDimensions, JuicyGUI_Color iColor);
+        SDL_Surface* CreateSurfacePNG(const char* iFilepath);
+        SDL_Surface* CreateSurfaceTXT(const char* iText, SDL_Point* oDimensions, TTF_Font* iFont, JuicyGUI_Color iColor);
+        void ElevateRenderer(bool iState);
         SDL_Window* _Window;
         SDL_Renderer* _Renderer;
         SDL_Event* _Event;
         JuicyGUI_Time _TmilNow;
         JuicyGUI_Time _TmilLast;
         JuicyGUI_Time _TmilDelta;
-        SDL_Point _ScreenSize;
         SDL_Point _MousePos;
         uint32_t _MouseState;
-        TTF_Font* _Font;
-        SDL_Texture* _Charset[JUICYGUI_CHARSET_SIZE];
-        int _CharsetWidth[JUICYGUI_CHARSET_SIZE];
-        int _CharsetHeight;
-        int _CharsetLineMargin;
-        SDL_Point _CharsetCursor;
-        JuicyGUI_Button** _ButtonList;
-        uint32_t _ButtonListSize;
+        JuicyGUI_Element** _ElementList;
+        uint32_t _ElementListSize;
 };
 
 #endif // JUICYGUI_H_INCLUDED
