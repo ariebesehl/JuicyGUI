@@ -22,13 +22,11 @@ SDL_Point operator- (const SDL_Point& param0, const SDL_Point& param1) {
     return diff;
 }
 
-bool JSDL_IsRectEmpty(const SDL_Rect* iRect) {
-    return (iRect->w == 0 && iRect->h == 0);
+bool JSDL_IsRectEmpty(const SDL_Rect& iRect) {
+    return (iRect.w == 0 && iRect.h == 0);
 }
 
-void JSDL_SetRectPos(SDL_Rect* iRect, const SDL_Point* iPosition) {
-    if (iPosition != NULL) {
-        iRect->x = iPosition->x;
-        iRect->y = iPosition->y;
-    }
+void JSDL_SetRectPos(SDL_Rect& iRect, const SDL_Point& iPosition) {
+        iRect.x = iPosition.x;
+        iRect.y = iPosition.y;
 }

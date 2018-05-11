@@ -259,7 +259,7 @@ void JuicyGUI_Charset::getCursor(SDL_Point* oPosition) {
 void JuicyGUI_Charset::draw() {
     SDL_Rect drawRect;
     for (uint32_t i = 0; i < _ctrPrintjobs; i++) {
-        JSDL_SetRectPos(&drawRect, &(_printjobs[i].position));
+        JSDL_SetRectPos(drawRect, (_printjobs[i].position));
         drawRect.w = _textureWidth[_printjobs[i].charNum];
         drawRect.h = _textureHeight[_printjobs[i].charNum];
         element.getHost()->RenderTexture(_texture[_printjobs[i].charNum], &drawRect);

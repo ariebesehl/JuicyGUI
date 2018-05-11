@@ -11,9 +11,9 @@ bool operator== (const SDL_Point& param0, const SDL_Point& param1);
 SDL_Point operator+ (const SDL_Point& param0, const SDL_Point& param1);
 SDL_Point operator- (const SDL_Point& param0, const SDL_Point& param1);
 
-bool JSDL_IsRectEmpty(const SDL_Rect* iRect);
+bool JSDL_IsRectEmpty(const SDL_Rect& iRect);
 
-void JSDL_SetRectPos(SDL_Rect* iRect, const SDL_Point* iPosition);
+void JSDL_SetRectPos(SDL_Rect& iRect, const SDL_Point& iPosition);
 
 
 

@@ -29,7 +29,6 @@ class JuicyGUI {
         JuicyGUI(SDL_Window* iWindow, SDL_Renderer* iRenderer, SDL_Event* iEvent);
         ~JuicyGUI(void);
         JuicyGUI_Action UpdateState(JuicyGUI_ID* oElementID, JuicyGUI_Action* oActionID);
-        bool RegisterElementOLD(void* iPtrElement, JuicyGUI_Type iTypeElement);
         void DrawBackground(JuicyGUI_Color iColor);
         void DrawElements(void);
         void GetScreenSize(SDL_Point* oSize);

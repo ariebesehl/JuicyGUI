@@ -72,7 +72,7 @@ void JuicyGUI_Button::initTextures() {
 }
 
 void JuicyGUI_Button::createTextures() {
-    if (!JSDL_IsRectEmpty(element.getRect())) {
+    if (!JSDL_IsRectEmpty(*(element.getRect()))) {
         for (int i = 0; i < JUICYGUI_BUTTON_NUM_STATES; i++) {
             SDL_Point buttonSize;
             element.getSize(&buttonSize);
