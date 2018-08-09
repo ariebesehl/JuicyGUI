@@ -1,132 +1,159 @@
 
-#include "Juicy_SDL.h"
-
-#include "JuicyGUI_Element.h"
-
-#include "JuicyGUI_Button.h"
 #include "JuicyGUI_Definitions.h"
+#include "JuicyGUI_Button.h"
+
+JuicyGUI_Button_Properties _defStateNone;
+JuicyGUI_Button_Properties _defStatePressed;
+JuicyGUI_Button_Properties _defStateHover;
 
 
-int DEF_UI_Button_Frame_Size[JUICYGUI_BUTTON_NUM_STATES] = {GAME_UI_BUTTON_FRAME_SIZE, GAME_UI_BUTTON_FRAME_SIZE, GAME_UI_BUTTON_FRAME_SIZE};
-const char* DEF_UI_Button_Font_Type[JUICYGUI_BUTTON_NUM_STATES] = {GAME_UI_FONT_TYPE, GAME_UI_FONT_TYPE, GAME_UI_FONT_TYPE};
-JuicyGUI_Color DEF_UI_Button_Color[JUICYGUI_BUTTON_NUM_STATES] = {GAME_UI_BUTTON_COLOR, GAME_UI_BUTTON_COLOR_HOVER, GAME_UI_BUTTON_COLOR_PRESSED};
-JuicyGUI_Color DEF_UI_Button_Frame_Color[JUICYGUI_BUTTON_NUM_STATES] = {GAME_UI_BUTTON_FRAME_COLOR, GAME_UI_BUTTON_FRAME_COLOR_HOVER, GAME_UI_BUTTON_FRAME_COLOR_PRESSED};
-JuicyGUI_Color DEF_UI_Button_Font_Color[JUICYGUI_BUTTON_NUM_STATES] = {GAME_UI_BUTTON_FONT_COLOR, GAME_UI_BUTTON_FONT_COLOR_HOVER, GAME_UI_BUTTON_FONT_COLOR_PRESSED};
-
-JuicyGUI_Button::JuicyGUI_Button(JuicyGUI* iHostUI, JuicyGUI_ID iID, uint32_t iSubType, const char* iLabel, const SDL_Rect* iRect) {
+JuicyGUI_Button::JuicyGUI_Button(JuicyGUI* iHostUI, JD_INDEX iID, JD_FLAG iFlag, const char* iLabel, const JD_Rect* iRect) {
     element.setCredentials(iHostUI, this, iID, JUICYGUI_TYPE_ID_BUTTON);
     element.setRect(iRect);
-    _subType = iSubType;
-    initTextures();
-    for (int i = 0; i < JUICYGUI_BUTTON_NUM_STATES; i++) {
-        properties[i].label = iLabel;
-        properties[i].frameSize = DEF_UI_Button_Frame_Size[i];
-        properties[i].color = DEF_UI_Button_Color[i];
-        properties[i].frameColor = DEF_UI_Button_Frame_Color[i];
-        properties[i].fontColor = DEF_UI_Button_Font_Color[i];
-        properties[i].fontPath = DEF_UI_Button_Font_Type[i];
-    }
-    initTextures();
+    flag = iFlag;
+    initStates();
+	textureEngine = new JSPR(element.getEngine());
+    initDefault(iLabel);
     createTextures();
 }
 
 JuicyGUI_Button::~JuicyGUI_Button() {
-    destroyTextures();
+	if (textureEngine != NULL) delete textureEngine;
+    destroyStates();
 }
 
-void JuicyGUI_Button::draw() {
-    if (element.getFlag() & JUICYGUI_ELEMENTFLAG_SHOW) {
-        if (_texture[getTextureID()] != NULL)  {
-            element.getHost()->RenderTexture(_texture[getTextureID()], element.getRect());
+void JuicyGUI_Button::initDefault(const char* iLabel) {
+    _defStateNone.label = (iLabel != NULL) ? iLabel : NULL;
+    _defStateNone.fontPath = GAME_UI_FONT_TYPE;
+    _defStateNone.frameSize = GAME_UI_BUTTON_FRAME_SIZE;
+    _defStateNone.color = GAME_UI_BUTTON_COLOR;
+    _defStateNone.frameColor = GAME_UI_BUTTON_FRAME_COLOR;
+    _defStateNone.fontColor = GAME_UI_BUTTON_FONT_COLOR;
+    _defStateHover = _defStateNone;
+    _defStateHover.color = GAME_UI_BUTTON_COLOR_HOVER;
+    _defStateHover.frameColor = GAME_UI_BUTTON_FRAME_COLOR_HOVER;
+    _defStateHover.fontColor = GAME_UI_BUTTON_FONT_COLOR_HOVER;
+    _defStatePressed = _defStateNone;
+    _defStatePressed.color = GAME_UI_BUTTON_COLOR_PRESSED;
+    _defStatePressed.frameColor = GAME_UI_BUTTON_FRAME_COLOR_PRESSED;
+    _defStatePressed.fontColor = GAME_UI_BUTTON_FONT_COLOR_PRESSED;
+    SetProperties(JUICYGUI_ACTION_NONE, &_defStateNone);
+    SetProperties(JUICYGUI_ACTION_PRESSED, &_defStatePressed);
+    SetProperties(JUICYGUI_ACTION_HOVER, &_defStateHover);
+}
+
+bool JuicyGUI_Button::GetProperties(JuicyGUI_Button_Properties* oTemplate) {
+    return GetProperties(JUICYGUI_ACTION_NONE, oTemplate);
+}
+bool JuicyGUI_Button::GetProperties(JD_FLAG iActionID, JuicyGUI_Button_Properties* oTemplate) {
+    JD_INDEX index = element.getActionIndex(iActionID);
+    bool actionOK = (oTemplate != NULL);
+    actionOK &= (iActionID && index) || (!bool(iActionID) && !bool(index));
+    if (actionOK) {
+        *oTemplate = *(states[index]);
+    }
+    return actionOK;
+}
+bool JuicyGUI_Button::SetProperties(JuicyGUI_Button_Properties* iTemplate) {
+    bool settingOK = true;
+    for (JD_INDEX i = 0; i < JUICYGUI_NUM_ACTION; i++) {
+        settingOK &= SetProperties(i, iTemplate);
+    }
+    return settingOK;
+}
+bool JuicyGUI_Button::SetProperties(JD_FLAG iActionID, JuicyGUI_Button_Properties* iProperties) {
+    JD_INDEX index = element.getActionIndex(iActionID);
+    if ((iActionID && index) || (!bool(iActionID) && !bool(index))) {
+        if (states[index] != NULL) {
+            *(states[index]) = *iProperties;
+        } else {
+            states[index] = new JuicyGUI_Button_Properties;
+            *(states[index]) = *iProperties;
         }
+		resetTextures();
+		return true;
+    }
+    return false;
+}
+
+void JuicyGUI_Button::initStates() {
+    states = new JuicyGUI_Button_Properties*[JUICYGUI_NUM_ACTION];
+    JDM_NullList((void**)states, JUICYGUI_NUM_ACTION);
+}
+
+
+void JuicyGUI_Button::destroyStates() {
+    if (states != NULL) {
+        for (JD_INDEX i = 0; i < JUICYGUI_NUM_ACTION; i++) {
+            if (states[i] != NULL) {
+                delete states[i];
+            }
+        }
+        JDM_DeleteList((void***)&states, NULL);
     }
 }
 
-uint32_t JuicyGUI_Button::getTextureID() {
-    return getTextureID(element.getAction());
-}
-
-uint32_t JuicyGUI_Button::getTextureID(uint32_t iActionID) {
-    uint32_t textureID = JUICYGUI_BUTTON_TEXTURE_ID_NONE;
-    switch (iActionID) {
-        default:
-        case JUICYGUI_ACTION_NONE:
-            break;
-        case JUICYGUI_ACTION_HOVER:
-            textureID = JUICYGUI_BUTTON_TEXTURE_ID_HOVER;
-            break;
-        case JUICYGUI_ACTION_PRESSED:
-            textureID = JUICYGUI_BUTTON_TEXTURE_ID_PRESSED;
-            break;
-        case JUICYGUI_ACTION_RELEASED:
-            textureID = JUICYGUI_BUTTON_TEXTURE_ID_RELEASED;
-            break;
-    }
-    return textureID;
-}
-
-void JuicyGUI_Button::initTextures() {
-    for (int i = 0; i < JUICYGUI_BUTTON_NUM_STATES; i++) {
-        _texture[i] = NULL;
-    }
+void JuicyGUI_Button::resetStates() {
+    destroyStates();
+    initStates();
 }
 
 void JuicyGUI_Button::createTextures() {
-    if (!JSDL_IsRectEmpty(*(element.getRect()))) {
-        for (int i = 0; i < JUICYGUI_BUTTON_NUM_STATES; i++) {
-            SDL_Point buttonSize;
-            element.getSize(&buttonSize);
-            SDL_Surface* cacheDraw = element.getHost()->CreateSurfaceFill(&buttonSize, properties[i].frameColor);
-            SDL_Surface* cacheContent = NULL;
-            SDL_Rect cacheContentRect;
-            cacheContentRect = *(element.getRect());
-            cacheContentRect.x = properties[i].frameSize;
-            cacheContentRect.y = properties[i].frameSize;
-            cacheContentRect.w -= (properties[i].frameSize << 1);
-            cacheContentRect.h -= (properties[i].frameSize << 1);
-            switch (_subType) {
-                case JUICYGUI_BUTTON_SUBTYPE_IMAGE: {
-                        if (properties[i].label != NULL) {
-                            cacheContent = element.getHost()->CreateSurfacePNG(properties[i].label);
-                            SDL_BlitScaled(cacheContent, NULL, cacheDraw, &cacheContentRect);
+    if (!(*(element.getRect()) == 0) && textureEngine != NULL) {
+        for (JD_INDEX i = 0; i < JUICYGUI_NUM_ACTION; i++) {
+            if (states[i] != NULL) {
+                JD_Point buttonSize;
+                element.getSize(&buttonSize);
+                SDL_Surface* cacheDraw = element.getEngine()->CreateSurfaceFill(&buttonSize, states[i]->frameColor);
+                JD_Rect cacheContentRect;
+                cacheContentRect.x = states[i]->frameSize;
+                cacheContentRect.y = states[i]->frameSize;
+                cacheContentRect.w = element.getWidth() - (states[i]->frameSize << 1);
+                cacheContentRect.h = element.getHeight() - (states[i]->frameSize << 1);
+                buttonSize.x = cacheContentRect.w;
+                buttonSize.y = cacheContentRect.h;
+                SDL_Surface* cacheContent = element.getEngine()->CreateSurfaceFill(&buttonSize, states[i]->color);
+                element.getEngine()->BlitSurfaces(cacheContent, cacheDraw, NULL, &cacheContentRect);
+                switch (flag & JUICYGUI_BUTTON_FLAG_MASK_TYPE) {
+                    case JUICYGUI_BUTTON_FLAG_IMAGE: {
+                            if (states[i]->label != NULL) {
+                                cacheContent = element.getEngine()->CreateSurfaceIMG(states[i]->label);
+                            }
                         }
-                    }
-                    break;
-                case JUICYGUI_BUTTON_SUBTYPE_BASIC: {
-                        SDL_FillRect(cacheDraw, &cacheContentRect, properties[i].color);
-                        SDL_Point txtSize;
-                        txtSize.x = 0;
-                        txtSize.y = 0;
-                        if (properties[i].label != NULL) {
-                            TTF_Font* loadedFont = TTF_OpenFont(properties[i].fontPath, (buttonSize.y >> 1));
-                            cacheContent = element.getHost()->CreateSurfaceTXT(properties[i].label, &txtSize, loadedFont, properties[i].fontColor);
-                            TTF_CloseFont(loadedFont);
+                        break;
+                    case JUICYGUI_BUTTON_FLAG_NORMAL: {
+                            JD_Point txtSize;
+                            txtSize.x = 0;
+                            txtSize.y = 0;
+                            if (states[i]->label != NULL) {
+                                TTF_Font* loadedFont = TTF_OpenFont(states[i]->fontPath, (buttonSize.y >> 1));
+                                cacheContent = element.getEngine()->CreateSurfaceTXT(states[i]->label, &txtSize, loadedFont, states[i]->fontColor);
+                                TTF_CloseFont(loadedFont);
+                            }
+                            cacheContentRect.w = txtSize.x;
+                            cacheContentRect.h = txtSize.y;
+                            cacheContentRect.x = ((buttonSize.x - txtSize.x) >> 1);
+                            cacheContentRect.y = ((buttonSize.y - txtSize.y) >> 1);
                         }
-                        cacheContentRect.w = txtSize.x;
-                        cacheContentRect.h = txtSize.y;
-                        cacheContentRect.x = ((buttonSize.x - txtSize.x) >> 1);
-                        cacheContentRect.y = ((buttonSize.y - txtSize.y) >> 1);
-                        SDL_BlitScaled(cacheContent, NULL, cacheDraw, &cacheContentRect);
-                    }
-                    break;
-                default:
-                    break;
-            }
-            _texture[i] = element.getHost()->CreateTextureSurface(cacheDraw);
-            SDL_FreeSurface(cacheDraw);
-            if (cacheContent != NULL) SDL_FreeSurface(cacheContent);
+                        break;
+                    default:
+                        break;
+                }
+                element.getEngine()->BlitSurfaces(cacheContent, cacheDraw, NULL, &cacheContentRect);
+				textureEngine->AddTexture(element.getEngine()->CreateTexture(cacheDraw));
+                if (cacheDraw != NULL) SDL_FreeSurface(cacheDraw);
+                if (cacheContent != NULL) SDL_FreeSurface(cacheContent);
+            } else {
+				textureEngine->AddTexture(NULL);
+			}
         }
+        element.SetTextureEngine(textureEngine);
     }
 }
 
 void JuicyGUI_Button::resetTextures() {
-    destroyTextures();
-    initTextures();
-    createTextures();
+	textureEngine->Reset();
+	createTextures();
 }
 
-void JuicyGUI_Button::destroyTextures() {
-    for (int i = 0; i < JUICYGUI_BUTTON_NUM_STATES; i++) {
-        if (_texture[i] != NULL) SDL_DestroyTexture(_texture[i]);
-    }
-}
+

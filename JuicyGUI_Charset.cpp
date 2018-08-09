@@ -1,79 +1,97 @@
 
-#include "Juicy_SDL.h"
-
-#include "JuicyGUI_Element.h"
-#include "JuicyGUI_Charset.h"
 #include "JuicyGUI_Definitions.h"
+#include "JuicyGUI_Charset.h"
 
+#include <iostream>
 
-JuicyGUI_Charset::JuicyGUI_Charset(JuicyGUI* iHostUI, JuicyGUI_ID assignedID, const char* filePath, int fontSize, JuicyGUI_Color fontColor) {
+JuicyGUI_Charset::JuicyGUI_Charset(JuicyGUI* iHostUI, JD_INDEX assignedID, const char* filePath, JD_I fontSize, JD_COLOR fontColor) {
     element.setCredentials(iHostUI, this, assignedID, JUICYGUI_TYPE_ID_CHARSET);
     properties.fontPath = filePath;
     properties.fontSize = fontSize;
     properties.color = fontColor;
     properties.fillColor = ~fontColor | 0xff;
-    _ctrPrintjobs = 0;
-    initTextures();
+	properties.style = JUICYGUI_CHARSET_STYLE_NORMAL;
+	setStyleOffset();
+	JD_INDEX totalSize = JUICYGUI_CHARSET_NUM_STYLES * JUICYGUI_CHARSET_SIZE;
+	textureEngine = NULL;
+	textureEngine = new JSPR(element.getEngine(), totalSize);
+	element.SetTextureEngine(textureEngine);
+	charSizes = NULL;
+	charSizes = new JD_Point*[totalSize];
+	JDM_NullList((void**)charSizes, &totalSize);
     createTextures();
 }
 
 JuicyGUI_Charset::~JuicyGUI_Charset() {
-    destroyTextures();
+	if (textureEngine != NULL) {
+        delete textureEngine;
+        textureEngine = NULL;
+	}
+	if (charSizes != NULL) {
+        for (JD_INDEX i = 0; i < JUICYGUI_CHARSET_NUM_STYLES * JUICYGUI_CHARSET_SIZE; i++) {
+            if (charSizes[i] != NULL) {
+                delete charSizes[i];
+                charSizes[i] = NULL;
+            }
+        }
+        delete[] charSizes;
+        charSizes = NULL;
+	}
 }
 
-void JuicyGUI_Charset::printTXT(const char* text, SDL_Point* iPosition) {
+void JuicyGUI_Charset::printTXT(const char* text, JD_Point* iPosition) {
     setCursor(iPosition);
     printer(text);
 }
 
-void JuicyGUI_Charset::printlnTXT(const char* text, SDL_Point* iPosition) {
+void JuicyGUI_Charset::printlnTXT(const char* text, JD_Point* iPosition) {
     setCursor(iPosition);
     newLine(true);
     printer(text);
     carrierReturn();
 }
 
-void JuicyGUI_Charset::printINT(int iInteger, SDL_Point* iPosition) {
+void JuicyGUI_Charset::printINT(JD_I iInteger, JD_Point* iPosition) {
     setCursor(iPosition);
     printerINT(iInteger);
 }
 
-void JuicyGUI_Charset::printlnINT(int iInteger, SDL_Point* iPosition) {
+void JuicyGUI_Charset::printlnINT(JD_I iInteger, JD_Point* iPosition) {
     setCursor(iPosition);
     newLine(true);
     printerINT(iInteger);
     carrierReturn();
 }
 
-void JuicyGUI_Charset::printHEX(int iInteger, SDL_Point* iPosition) {
+void JuicyGUI_Charset::printHEX(JD_I iInteger, JD_Point* iPosition) {
     setCursor(iPosition);
     printerHEX(iInteger);
 }
 
-void JuicyGUI_Charset::printlnHEX(int iInteger, SDL_Point* iPosition) {
+void JuicyGUI_Charset::printlnHEX(JD_I iInteger, JD_Point* iPosition) {
     setCursor(iPosition);
     newLine(true);
     printerHEX(iInteger);
     carrierReturn();
 }
 
-void JuicyGUI_Charset::getSizeTXT(const char* text, SDL_Point* target) {
+void JuicyGUI_Charset::getSizeTXT(const char* text, JD_Point* target) {
     sizer(text, target);
 }
 
-void JuicyGUI_Charset::getSizeINT(int integer, SDL_Point* target) {
+void JuicyGUI_Charset::getSizeINT(JD_I integer, JD_Point* target) {
     sizerINT(integer, target);
 }
 
 void JuicyGUI_Charset::printer(const char* text) {
     if (text != NULL) {
-        uint32_t i = 0;
+        JD_INDEX i = 0;
         while (true) {
             if (text[i] != '\0' && i < JUICYGUI_CHARSET_MAX_LENGTH) {
-                uint32_t numChar = text[i] & JUICYGUI_CHARSET_MASK;
+                JD_INDEX numChar = (text[i] & JUICYGUI_CHARSET_MASK);
                 switch (text[i]) {
                     default:
-                        if (_textureWidth[numChar]) {
+                        if (charSizes[numChar]->x) {
                             printerChar(numChar, 0);
                         }
                         break;
@@ -86,20 +104,20 @@ void JuicyGUI_Charset::printer(const char* text) {
     }
 }
 
-void JuicyGUI_Charset::printerINT(int iInteger) {
+void JuicyGUI_Charset::printerINT(JD_I iInteger) {
     if (iInteger < 0) {
         printerChar(JUICYGUI_CHARSET_CHARNUM_HYPHEN, 0);
         iInteger = -iInteger;
     }
-    uint32_t numDigits = 1;
-    int exp = 10;
+    JD_U numDigits = 1;
+    JD_I exp = 10;
     while (iInteger / exp) {
         numDigits++;
         exp *= 10;
     }
-    uint32_t digit = 0;
+    JD_U digit = 0;
     exp /= 10;
-    for (uint32_t i = 0; i < numDigits; i++) {
+    for (JD_INDEX i = 0; i < numDigits; i++) {
         digit = (iInteger / exp);
         digit += (digit > 9) ? JUICYGUI_CHARSET_CHARNUM_HEX_OFFSET : JUICYGUI_CHARSET_CHARNUM_INT_OFFSET;
         printerChar(digit, 0);
@@ -108,22 +126,22 @@ void JuicyGUI_Charset::printerINT(int iInteger) {
     }
 }
 
-void JuicyGUI_Charset::printerHEX(int iInteger) {
+void JuicyGUI_Charset::printerHEX(JD_I iInteger) {
     if (iInteger < 0) {
         printerChar(JUICYGUI_CHARSET_CHARNUM_HYPHEN, 0);
         iInteger = -iInteger;
     }
     printerChar(JUICYGUI_CHARSET_CHARNUM_DIGIT_0, 0);
     printerChar(JUICYGUI_CHARSET_CHARNUM_LOWERCASE_X, 0);
-    uint32_t numDigits = 1;
-    int exp = 16;
+    JD_U numDigits = 1;
+    JD_I exp = 16;
     while (iInteger / exp) {
         numDigits++;
         exp *= 16;
     }
-    uint32_t digit = 0;
+    JD_U digit = 0;
     exp /= 16;
-    for (uint32_t i = 0; i < numDigits; i++) {
+    for (JD_INDEX i = 0; i < numDigits; i++) {
         digit = (iInteger / exp);
         digit += (digit > 9) ? JUICYGUI_CHARSET_CHARNUM_HEX_OFFSET : JUICYGUI_CHARSET_CHARNUM_INT_OFFSET;
         printerChar(digit, 0);
@@ -133,7 +151,7 @@ void JuicyGUI_Charset::printerHEX(int iInteger) {
 }
 
 void JuicyGUI_Charset::newLine(bool iEnable) {
-    static SDL_Point cache;
+    static JD_Point cache;
     if (iEnable) {
         element.getPos(&cache);
     } else {
@@ -143,32 +161,33 @@ void JuicyGUI_Charset::newLine(bool iEnable) {
 
 void JuicyGUI_Charset::carrierReturn(void) {
     newLine(false);
-    element.setPosY(element.getPosY() + _textureHeight[JUICYGUI_CHARSET_REFERENCE_HEIGHT] + properties.lineMargin);
+    element.setPosY(element.getPosY() + charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->x + properties.lineMargin);
 }
 
-void JuicyGUI_Charset::printerChar(uint32_t iCharNum, uint32_t options) {
-    if (_ctrPrintjobs < JUICYGUI_CHARSET_MAX_PRINTJOBS) {
+void JuicyGUI_Charset::printerChar(JD_INDEX iCharNum, JD_INDEX options) {
+    if (textureEngine != NULL) {
         iCharNum &= JUICYGUI_CHARSET_MASK;
-        element.getPos(&(_printjobs[_ctrPrintjobs].position));
-        _printjobs[_ctrPrintjobs].charNum = iCharNum;
-        _ctrPrintjobs++;
-        element.setPosX(element.getPosX() + _textureWidth[iCharNum]);
+        iCharNum += styleOffset;
+        JD_Rect cursorRect = *(element.getRect());
+        JDM_SetRectSize(&cursorRect, charSizes[iCharNum]);
+        textureEngine->AddInstruction(iCharNum, &cursorRect);
+        element.setPosX(element.getPosX() + charSizes[iCharNum]->x);
     }
 }
 
-void JuicyGUI_Charset::sizer(const char* text, SDL_Point* target) {
+void JuicyGUI_Charset::sizer(const char* text, JD_Point* target) {
     if (text != NULL) {
         target->x = 0;
         target->y = 0;
-        uint32_t i = 0;
+        JD_INDEX i = 0;
         while (true) {
             if (text[i] != '\0' && i < JUICYGUI_CHARSET_MAX_LENGTH) {
-                uint32_t numChar = text[i] & JUICYGUI_CHARSET_MASK;
+                JD_INDEX numChar = text[i] & JUICYGUI_CHARSET_MASK;
                 switch (text[i]) {
                     default:
-                        if (_textureWidth[numChar]) {
-                            target->x += _textureWidth[numChar];
-                            if (_textureHeight[numChar] > target->y) target->y = _textureHeight[numChar];
+                        if (charSizes[numChar + styleOffset]->x) {
+                            target->x += charSizes[numChar + styleOffset]->x;
+                            if (charSizes[numChar + styleOffset]->y > target->y) target->y = charSizes[numChar + styleOffset]->y;
                         }
                         break;
                 }
@@ -180,144 +199,123 @@ void JuicyGUI_Charset::sizer(const char* text, SDL_Point* target) {
     }
 }
 
-void JuicyGUI_Charset::sizerINT(int integer, SDL_Point* target) {
+void JuicyGUI_Charset::sizerINT(JD_I integer, JD_Point* target) {
     target->x = 0;
     target->y = 0;
     if (integer < 0) {
-        target->x += _textureWidth[JUICYGUI_CHARSET_CHARNUM_HYPHEN];
-        target->y = _textureHeight[JUICYGUI_CHARSET_CHARNUM_HYPHEN];
+        target->x += charSizes[JUICYGUI_CHARSET_CHARNUM_HYPHEN + styleOffset]->x;
+        target->y = charSizes[JUICYGUI_CHARSET_CHARNUM_HYPHEN + styleOffset]->y;
         integer = -integer;
     }
-    uint32_t numDigits = 1;
-    int exp = 10;
+    JD_U numDigits = 1;
+    JD_I exp = 10;
     while (integer / exp) {
         numDigits++;
         exp *= 10;
     }
-    uint32_t digit = 0;
+    JD_U digit = 0;
     exp /= 10;
-    for (uint32_t i = 0; i < numDigits; i++) {
+    for (JD_INDEX i = 0; i < numDigits; i++) {
         digit = (integer / exp);
         digit += (digit > 9) ? JUICYGUI_CHARSET_CHARNUM_HEX_OFFSET : JUICYGUI_CHARSET_CHARNUM_INT_OFFSET;
-        target->x += _textureWidth[digit];
-        if (_textureHeight[digit] > target->y) target->y = _textureHeight[digit];
+        target->x += charSizes[digit + styleOffset]->x;
+        if (charSizes[digit + styleOffset]->y > target->y) target->y = charSizes[digit + styleOffset]->y;
         integer %= exp;
         exp /= 10;
     }
 }
 
-void JuicyGUI_Charset::sizerHEX(int integer, SDL_Point* target) {
+void JuicyGUI_Charset::sizerHEX(JD_I integer, JD_Point* target) {
     target->x = 0;
     target->y = 0;
     if (integer < 0) {
-        target->x += _textureWidth[JUICYGUI_CHARSET_CHARNUM_HYPHEN];
-        target->y = _textureHeight[JUICYGUI_CHARSET_CHARNUM_HYPHEN];
+        target->x += charSizes[JUICYGUI_CHARSET_CHARNUM_HYPHEN + styleOffset]->x;
+        target->y = charSizes[JUICYGUI_CHARSET_CHARNUM_HYPHEN + styleOffset]->y;
         integer = -integer;
     }
-    target->x += _textureWidth[JUICYGUI_CHARSET_CHARNUM_DIGIT_0];
-    if (_textureHeight[JUICYGUI_CHARSET_CHARNUM_DIGIT_0] > target->y) target->y = _textureHeight[JUICYGUI_CHARSET_CHARNUM_DIGIT_0];
-    target->x += _textureWidth[JUICYGUI_CHARSET_CHARNUM_LOWERCASE_X];
-    if (_textureHeight[JUICYGUI_CHARSET_CHARNUM_LOWERCASE_X] > target->y) target->y = _textureHeight[JUICYGUI_CHARSET_CHARNUM_LOWERCASE_X];
-    uint32_t numDigits = 1;
-    int exp = 16;
+    target->x += charSizes[JUICYGUI_CHARSET_CHARNUM_DIGIT_0 + styleOffset]->x;
+    if (charSizes[JUICYGUI_CHARSET_CHARNUM_DIGIT_0 + styleOffset]->y > target->y) target->y = charSizes[JUICYGUI_CHARSET_CHARNUM_DIGIT_0 + styleOffset]->y;
+    target->x += charSizes[JUICYGUI_CHARSET_CHARNUM_LOWERCASE_X + styleOffset]->x;
+    if (charSizes[JUICYGUI_CHARSET_CHARNUM_LOWERCASE_X + styleOffset]->y > target->y) target->y = charSizes[JUICYGUI_CHARSET_CHARNUM_LOWERCASE_X + styleOffset]->y;
+    JD_U numDigits = 1;
+    JD_I exp = 16;
     while (integer / exp) {
         numDigits++;
         exp *= 16;
     }
-    uint32_t digit = 0;
+    JD_U digit = 0;
     exp /= 16;
-    for (uint32_t i = 0; i < numDigits; i++) {
+    for (JD_INDEX i = 0; i < numDigits; i++) {
         digit = (integer / exp);
         digit += (digit > 9) ? JUICYGUI_CHARSET_CHARNUM_HEX_OFFSET : JUICYGUI_CHARSET_CHARNUM_INT_OFFSET;
-        target->x += _textureWidth[digit];
-        if (_textureHeight[digit] > target->y) target->y = _textureHeight[digit];
+        target->x += charSizes[digit + styleOffset]->x;
+        if (charSizes[digit + styleOffset]->y > target->y) target->y = charSizes[digit + styleOffset]->y;
         integer %= exp;
         exp /= 10;
     }
 }
 
 
-void JuicyGUI_Charset::setFontSize(int fontSize) {
-    if (properties.fontSize != fontSize) {
-        properties.fontSize = fontSize;
+void JuicyGUI_Charset::setFontSize(JD_I iFontSize) {
+    if (properties.fontSize != iFontSize) {
+        properties.fontSize = iFontSize;
         resetTextures();
     }
 }
 
-void JuicyGUI_Charset::setCursor(SDL_Point* iPosition) {
+void JuicyGUI_Charset::setCursor(JD_Point* iPosition) {
     if (iPosition != NULL) {
         element.setPos(iPosition);
     }
 }
 
-void JuicyGUI_Charset::getCursor(SDL_Point* oPosition) {
+void JuicyGUI_Charset::getCursor(JD_Point* oPosition) {
     if (oPosition != NULL) {
         element.getPos(oPosition);
     }
 }
 
-void JuicyGUI_Charset::draw() {
-    SDL_Rect drawRect;
-    for (uint32_t i = 0; i < _ctrPrintjobs; i++) {
-        JSDL_SetRectPos(drawRect, (_printjobs[i].position));
-        drawRect.w = _textureWidth[_printjobs[i].charNum];
-        drawRect.h = _textureHeight[_printjobs[i].charNum];
-        element.getHost()->RenderTexture(_texture[_printjobs[i].charNum], &drawRect);
-    }
-    _ctrPrintjobs = 0;
-}
-
-void JuicyGUI_Charset::initTextures() {
-    for (uint32_t i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-        _textureWidth[i] = 0;
-        _textureHeight[i] = 0;
-        _texture[i] = NULL;
-        _textureFill[i] = NULL;
-    }
-    properties.lineMargin = 0;
-}
-
-
 bool JuicyGUI_Charset::createTextures() {
-    if (properties.fontPath != NULL) {
-        TTF_Font* _Font = TTF_OpenFont(properties.fontPath, properties.fontSize);
-        if (_Font != NULL) {
-            char charEnum[] = {0, '\0'};
-            char* ptrChar = &charEnum[0];
-            SDL_Point fillDim;
-            for (uint32_t i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-                TTF_SizeText(_Font, ptrChar, &_textureWidth[i], &_textureHeight[i]);
-                _texture[i] = element.getHost()->CreateTextureTXT(ptrChar, NULL, _Font, properties.color);
-                fillDim.x = _textureWidth[i];
-                fillDim.y = _textureHeight[i];
-                _textureFill[i] = element.getHost()->CreateTextureFill(&fillDim, properties.fillColor);
-                (*ptrChar)++;
-            }
-            properties.lineMargin = _textureHeight[JUICYGUI_CHARSET_REFERENCE_HEIGHT] / JUICYGUI_CHARSET_LINE_MARGIN_DIVISOR;
-            TTF_CloseFont(_Font);
-            return true;
-        } else {
-            return false;
-        }
-    } else {
-        return false;
-    }
+	if (textureEngine != NULL && charSizes != NULL) {
+		if (properties.fontPath != NULL) {
+			TTF_Font* _Font = TTF_OpenFont(properties.fontPath, properties.fontSize);
+			if (_Font != NULL) {
+				JD_Point charSize;
+				for (JD_INDEX style = 0; style < JUICYGUI_CHARSET_NUM_STYLES; style++) {
+                    TTF_SetFontStyle(_Font, style ? (JUICYGUI_CHARSET_STYLE_BOLD << (style - 1)) : JUICYGUI_CHARSET_STYLE_NORMAL);
+                    char charEnum[] = {0, '\0'};
+                    char* ptrChar = &charEnum[0];
+                    for (JD_INDEX i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
+                        JD_INDEX currentIndex = i + (style * JUICYGUI_CHARSET_SIZE);
+                        TTF_SizeText(_Font, ptrChar, &(charSize.x), &(charSize.y));
+                        if (charSizes[currentIndex] == NULL) {charSizes[currentIndex] = new JD_Point;}
+                        *charSizes[currentIndex] = charSize;
+                        textureEngine->AddSpecificTexture(currentIndex, element.getEngine()->CreateTextureTXT(ptrChar, NULL, _Font, properties.color));
+                        (*ptrChar)++;
+                    }
+				}
+				properties.lineMargin = charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y / JUICYGUI_CHARSET_LINE_MARGIN_DIVISOR;
+				TTF_CloseFont(_Font);
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 void JuicyGUI_Charset::resetTextures() {
-    destroyTextures();
-    initTextures();
+	textureEngine->Reset();
     createTextures();
 }
 
-void JuicyGUI_Charset::destroyTextures() {
-    for (uint32_t i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-        if (_texture[i] != NULL) {
-            SDL_DestroyTexture(_texture[i]);
-        }
-        if (_textureFill[i] != NULL) {
-            SDL_DestroyTexture(_textureFill[i]);
-        }
+void JuicyGUI_Charset::setStyleOffset() {
+    styleOffset = JDM_GetFlagIndex(properties.style) * JUICYGUI_CHARSET_SIZE;
+}
+
+void JuicyGUI_Charset::setStyle(JD_FLAG iStyle){
+    if (JDM_GetFlagIndex(iStyle) <= JUICYGUI_CHARSET_NUM_STYLES) {
+        properties.style = iStyle;
+        setStyleOffset();
     }
 }
 

@@ -1,56 +1,50 @@
-#include "JuicyGUI_Element.h"
-#include "JuicyGUI_Box.h"
-#include "JuicyGUI_Definitions.h"
 
-JuicyGUI_Box::JuicyGUI_Box(JuicyGUI* iHostUI, JuicyGUI_ID iID, SDL_Rect* iDimensions, JuicyGUI_Color iColor, JuicyGUI_Color iBorderColor) {
+#include "JuicyGUI_Definitions.h"
+#include "JuicyGUI_Box.h"
+
+JuicyGUI_Box::JuicyGUI_Box(JuicyGUI* iHostUI, JD_INDEX iID, JD_Rect* iDimensions, JD_COLOR iColor, JD_COLOR iBorderColor) {
     element.setCredentials(iHostUI, this, iID, JUICYGUI_TYPE_ID_BOX);
     element.setRect(iDimensions);
     properties.color = iColor;
     properties.borderColor = iBorderColor;
     properties.borderSize = JUICYGUI_BOX_BORDER_SIZE;
-    initTextures();
+	textureEngine = new JSPR(element.getEngine());
     createTextures();
 }
 
 JuicyGUI_Box::~JuicyGUI_Box() {
-    destroyTextures();
+	if (textureEngine != NULL) delete textureEngine;
 }
 
-void JuicyGUI_Box::draw() {
-    if ( element.getFlag() & JUICYGUI_ELEMENTFLAG_SHOW) {
-        element.getHost()->RenderTexture(_texture, element.getRect());
+void JuicyGUI_Box::createTextures() {
+    if (textureEngine != NULL) {
+        JD_Point cacheDimensions;
+        element.getSize(&cacheDimensions);
+        SDL_Surface* cacheSurface = element.getEngine()->CreateSurfaceFill(&cacheDimensions, properties.color);
+        SDL_Surface* cacheBorder = element.getEngine()->CreateSurfaceFill(&cacheDimensions, properties.borderColor);
+        JD_Rect drawRect;
+        drawRect.x = 0;
+        drawRect.y = 0;
+        drawRect.h = properties.borderSize;
+        drawRect.w = cacheDimensions.x;
+        element.getEngine()->BlitSurfaces(cacheBorder, cacheSurface, &drawRect, &drawRect);
+        drawRect.y = cacheDimensions.y - properties.borderSize;
+        element.getEngine()->BlitSurfaces(cacheBorder, cacheSurface, &drawRect, &drawRect);
+        drawRect.y = 0;
+        drawRect.h = cacheDimensions.y;
+        drawRect.w = properties.borderSize;
+        element.getEngine()->BlitSurfaces(cacheBorder, cacheSurface, &drawRect, &drawRect);
+        drawRect.x = cacheDimensions.x - properties.borderSize;
+        element.getEngine()->BlitSurfaces(cacheBorder, cacheSurface, &drawRect, &drawRect);
+        textureEngine->AddTexture(element.getEngine()->CreateTexture(cacheSurface));
+        SDL_FreeSurface(cacheBorder);
+        SDL_FreeSurface(cacheSurface);
+        element.SetTextureEngine(textureEngine);
     }
 }
 
-void JuicyGUI_Box::initTextures() {
-    _texture = NULL;
-}
-
-
-void JuicyGUI_Box::createTextures() {
-    SDL_Point cacheDimensions;
-    element.getSize(&cacheDimensions);
-    SDL_Surface* cacheBorderSurface0 = element.getHost()->CreateSurfaceFill(&cacheDimensions, properties.borderColor);
-    cacheDimensions.x -= properties.borderSize * 2;
-    cacheDimensions.y -= properties.borderSize * 2;
-    SDL_Surface* cacheBorderSurface1 = element.getHost()->CreateSurfaceFill(&cacheDimensions, properties.color);
-    SDL_Rect drawRect;
-    drawRect.x = properties.borderSize;
-    drawRect.y = properties.borderSize;
-    drawRect.w = cacheDimensions.x;
-    drawRect.h = cacheDimensions.y;
-    SDL_BlitSurface(cacheBorderSurface1, NULL, cacheBorderSurface0, &drawRect);
-    _texture = element.getHost()->CreateTextureSurface(cacheBorderSurface0);
-    SDL_FreeSurface(cacheBorderSurface0);
-    SDL_FreeSurface(cacheBorderSurface1);
-}
-
 void JuicyGUI_Box::resetTextures() {
-    destroyTextures();
-    initTextures();
+	textureEngine->Reset();
     createTextures();
 }
 
-void JuicyGUI_Box::destroyTextures() {
-    if (_texture != NULL) SDL_DestroyTexture(_texture);
-}

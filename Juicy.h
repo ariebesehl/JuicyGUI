@@ -8,7 +8,6 @@
 #include "JuicyGUI_Box.h"
 #include "JuicyGUI_Button.h"
 #include "JuicyGUI_Charset.h"
-#include "JuicyGUI_Element.h"
 
 
 #endif // JUICY_H_INCLUDED
