@@ -20,13 +20,12 @@ class JSPR {
 		JSPR(JEN* iEngine);
 		JSPR(JEN* iEngine, JD_INDEX iSize);
 		~JSPR();
-		SDL_Texture* GetTexture(JD_INDEX iIndex);
-		JD_INDEX AddTexture(SDL_Texture* iTexture);
-		void AddSpecificTexture(JD_INDEX iIndex, SDL_Texture* iTexture);
+		JuicySprite* GetSprite(JD_INDEX iIndex);
+		JD_INDEX AddSprite(JuicySprite* iSprite);
+		JD_INDEX AddSpecificSprite(JD_INDEX iIndex, JuicySprite* iSprite);
 		void Reset(void);
 		JD_INDEX AddInstruction(JD_INDEX iIndex, const JD_Rect* iRect);
-		//JSPR_DrawInstruction* GetLastInstruction();
-		void ClearInstructions() {flushInstructions();};
+		void Clear() {flushInstructions();};
 		void RepeatDraw(void) {RepeatDraw(true);};
 		void RepeatDraw(bool iRepeat) {if (iRepeat) flag |= JSPR_FLAG_NOFLUSH; else flag &= ~JSPR_FLAG_NOFLUSH;};
 		void SingleDraw(void) {RepeatDraw(false);};
@@ -36,17 +35,19 @@ class JSPR {
 		JD_FLAG flag;
 
 		void init(JD_INDEX iSize);
-		void destroy(void);
 
-		JD_INDEX ctrTextures;
-		JD_INDEX numTextures;
-		SDL_Texture** textures;
-		void destroyTextures();
+		JD_INDEX ctrSprites;
+		JD_INDEX numSprites;
+		JuicySprite** sprites;
+		void flushSprites();
+		void clearSprites();
+		void destroySprites();
 
 		JD_INDEX ctrInstructions;
 		JD_INDEX numInstructions;
 		JSPR_DrawInstruction** instructions;
 		void flushInstructions();
+		void clearInstructions();
 		void destroyInstructions();
 };
 

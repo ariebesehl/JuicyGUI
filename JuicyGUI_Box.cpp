@@ -13,32 +13,28 @@ JuicyGUI_Box::JuicyGUI_Box(JuicyGUI* iHostUI, JD_INDEX iID, JD_Rect* iDimensions
 }
 
 JuicyGUI_Box::~JuicyGUI_Box() {
-	if (textureEngine != NULL) delete textureEngine;
+	if (textureEngine != NULL) {delete textureEngine;}
 }
 
 void JuicyGUI_Box::createTextures() {
     if (textureEngine != NULL) {
         JD_Point cacheDimensions;
         element.getSize(&cacheDimensions);
-        SDL_Surface* cacheSurface = element.getEngine()->CreateSurfaceFill(&cacheDimensions, properties.color);
-        SDL_Surface* cacheBorder = element.getEngine()->CreateSurfaceFill(&cacheDimensions, properties.borderColor);
-        JD_Rect drawRect;
-        drawRect.x = 0;
-        drawRect.y = 0;
-        drawRect.h = properties.borderSize;
-        drawRect.w = cacheDimensions.x;
-        element.getEngine()->BlitSurfaces(cacheBorder, cacheSurface, &drawRect, &drawRect);
-        drawRect.y = cacheDimensions.y - properties.borderSize;
-        element.getEngine()->BlitSurfaces(cacheBorder, cacheSurface, &drawRect, &drawRect);
-        drawRect.y = 0;
-        drawRect.h = cacheDimensions.y;
-        drawRect.w = properties.borderSize;
-        element.getEngine()->BlitSurfaces(cacheBorder, cacheSurface, &drawRect, &drawRect);
-        drawRect.x = cacheDimensions.x - properties.borderSize;
-        element.getEngine()->BlitSurfaces(cacheBorder, cacheSurface, &drawRect, &drawRect);
-        textureEngine->AddTexture(element.getEngine()->CreateTexture(cacheSurface));
-        SDL_FreeSurface(cacheBorder);
-        SDL_FreeSurface(cacheSurface);
+        JD_COLOR* pixelData = NULL;
+        if (JDM_IsNotEmptyPoint(&cacheDimensions)) {
+            pixelData = new JD_COLOR[cacheDimensions.x * cacheDimensions.y];
+            for (JD_I y = 0; y < cacheDimensions.y; y++) {
+                for (JD_I x = 0; x < cacheDimensions.x; x++) {
+                    if ((x >= properties.borderSize) && (x < (cacheDimensions.x - properties.borderSize)) && (y >= properties.borderSize) && (y < (cacheDimensions.y - properties.borderSize))) {
+                        pixelData[x + y * cacheDimensions.x] = properties.color;
+                    } else {
+                        pixelData[x + y * cacheDimensions.x] = properties.borderColor;
+                    }
+                }
+            }
+        }
+        textureEngine->AddSprite((element.getEngine()->CreateSprite(&cacheDimensions, pixelData)));
+        if (pixelData != NULL) {delete[] pixelData;}
         element.SetTextureEngine(textureEngine);
     }
 }

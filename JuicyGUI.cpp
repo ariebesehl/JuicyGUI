@@ -49,8 +49,10 @@ bool JuicyGUI::registerElement(JuicyGUI_Element* iElement) {
 }
 
 JD_FLAG JuicyGUI::UpdateState(JuicyGUI_Event*** oEvent, JD_INDEX* numElements) {
+    static JD_INDEX numIteration = 0;
+
     element.setAction(JUICYGUI_ACTION_NONE);
-    if (engine->LoopHandle()) {
+    if (engine->LoopHandle() && numIteration) {
         JD_Point screenSize;
         engine->GetWindowSize(&screenSize);
         element.setSize(&screenSize);
@@ -72,6 +74,8 @@ JD_FLAG JuicyGUI::UpdateState(JuicyGUI_Event*** oEvent, JD_INDEX* numElements) {
     }
     if (numElements != NULL) {*numElements = ctrAction;}
     if (oEvent != NULL) {*oEvent = events;}
+
+    numIteration++;
     return element.getAction();
 }
 
@@ -90,6 +94,7 @@ void JuicyGUI::DrawElements(void) {
     for (JD_INDEX i = 0; i < numElement; i++) {
         elements[i]->draw();
     }
+    engine->Present();
 }
 
 bool JuicyGUI::evaluateElement(JuicyGUI_Element* iElement) {

@@ -51,6 +51,12 @@ void operator/= (JD_2U& param0, const unsigned int& param1) {
 }
 
 
+JD_2I operator- (const JD_2I& param0) {
+    JD_2I newPoint;
+    newPoint.x = -param0.x;
+    newPoint.y = -param0.y;
+    return newPoint;
+}
 
 bool operator!= (const JD_2I& param0, const JD_2I& param1) {
     return (param0.x != param1.x || param0.y != param1.y);
@@ -160,20 +166,38 @@ bool operator== (const JD_Rect& param0, const int& param1) {
     return ((param0.x == param1) && (param0.y == param1) && (param0.w == param1) && (param0.h == param1));
 }
 
-
+JD_INDEX JDM_GetBitIndex(JD_FLAG iFlag) {
+    JD_INDEX i = 0;
+    while (i < JDM_BITS) {
+        if ((iFlag << i) & 1) {return i;}
+        i++;
+    }
+    return i;
+}
 
 JD_INDEX JDM_GetFlagIndex(JD_FLAG iFlag) {
-    for (JD_INDEX i = 1; i < JDM_BITS; i++) {
-        if (iFlag & (1 << (i - 1))) return i;
+    if (iFlag) {
+        for (JD_INDEX i = 1; i < JDM_BITS; i++) {
+            if (iFlag & (1 << (i - 1))) return i;
+        }
     }
     return 0;
+}
+
+bool JDM_IsNotEmptyPoint(const JD_Point* iPoint) {
+    return iPoint->x && iPoint->y;
 }
 
 void JDM_EmptyPoint(JD_Point* oPoint) {
     oPoint->x = 0;
     oPoint->y = 0;
 }
-
+JD_I JDM_GetArea(const JD_Point* iPoint) {
+    return (iPoint->x * iPoint->y);
+}
+JD_I JDM_GetArea(const JD_Rect* iRect) {
+    return (iRect->w * iRect->h);
+}
 
 void JDM_EmptyRect(JD_Rect* oRect) {
     oRect->x = 0;
@@ -227,22 +251,21 @@ void JDM_GetRectSize(const JD_Rect* iRect, int* oWidth, int* oHeight) {
     *oWidth = iRect->w;
     *oHeight = iRect->h;
 }
-
-void JDM_CopyList(JD_List iList, JD_INDEX* ioSize, JD_List oList) {
-    if (iList != NULL && ioSize != NULL) {
-        for (JD_INDEX i = 0; i < (*ioSize); i++) {
+void JDM_CopyList(JD_List iList, const JD_INDEX* iSize, JD_List oList) {
+    if (iList != NULL && iSize != NULL) {
+        for (JD_INDEX i = 0; i < (*iSize); i++) {
             oList[i] = iList[i];
         }
     }
 }
-void JDM_NullList(JD_List ioList, JD_INDEX* ioSize) {
+void JDM_NullList(JD_List ioList, const JD_INDEX* ioSize) {
     if (ioList != NULL && ioSize != NULL) {
         for (JD_INDEX i = 0; i < (*ioSize); i++) {
             ioList[i] = NULL;
         }
     }
 }
-void JDM_NullList(JD_List ioList, JD_INDEX iSize) {
+void JDM_NullList(JD_List ioList, const JD_INDEX iSize) {
     if (ioList != NULL) {
         for (JD_INDEX i = 0; i < iSize; i++) {
             ioList[i] = NULL;

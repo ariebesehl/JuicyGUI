@@ -99,55 +99,64 @@ void JuicyGUI_Button::resetStates() {
 }
 
 void JuicyGUI_Button::createTextures() {
-    if (!(*(element.getRect()) == 0) && textureEngine != NULL) {
-        for (JD_INDEX i = 0; i < JUICYGUI_NUM_ACTION; i++) {
-            if (states[i] != NULL) {
-                JD_Point buttonSize;
-                element.getSize(&buttonSize);
-                SDL_Surface* cacheDraw = element.getEngine()->CreateSurfaceFill(&buttonSize, states[i]->frameColor);
-                JD_Rect cacheContentRect;
-                cacheContentRect.x = states[i]->frameSize;
-                cacheContentRect.y = states[i]->frameSize;
-                cacheContentRect.w = element.getWidth() - (states[i]->frameSize << 1);
-                cacheContentRect.h = element.getHeight() - (states[i]->frameSize << 1);
-                buttonSize.x = cacheContentRect.w;
-                buttonSize.y = cacheContentRect.h;
-                SDL_Surface* cacheContent = element.getEngine()->CreateSurfaceFill(&buttonSize, states[i]->color);
-                element.getEngine()->BlitSurfaces(cacheContent, cacheDraw, NULL, &cacheContentRect);
-                switch (flag & JUICYGUI_BUTTON_FLAG_MASK_TYPE) {
-                    case JUICYGUI_BUTTON_FLAG_IMAGE: {
-                            if (states[i]->label != NULL) {
-                                cacheContent = element.getEngine()->CreateSurfaceIMG(states[i]->label);
+    if (textureEngine != NULL) {
+        JD_Point buttonSize;
+        element.getSize(&buttonSize);
+        if (JDM_IsNotEmptyPoint(&buttonSize)) {
+            for (JD_INDEX i = 0; i < JUICYGUI_NUM_ACTION; i++) {
+                if (states[i] != NULL) {
+                    JD_COLOR* pixelData = new JD_COLOR[buttonSize.x * buttonSize.y];
+                    for (JD_I y = 0; y < buttonSize.y; y++) {
+                        for (JD_I x = 0; x < buttonSize.x; x++) {
+                            if ((x >= states[i]->frameSize) && (x < (buttonSize.x - states[i]->frameSize)) && (y >= states[i]->frameSize) && (y < (buttonSize.y - states[i]->frameSize))) {
+                                pixelData[x + y * buttonSize.x] = states[i]->color;
+                            } else {
+                                pixelData[x + y * buttonSize.x] = states[i]->frameColor;
                             }
                         }
-                        break;
-                    case JUICYGUI_BUTTON_FLAG_NORMAL: {
-                            JD_Point txtSize;
-                            txtSize.x = 0;
-                            txtSize.y = 0;
-                            if (states[i]->label != NULL) {
-                                TTF_Font* loadedFont = TTF_OpenFont(states[i]->fontPath, (buttonSize.y >> 1));
-                                cacheContent = element.getEngine()->CreateSurfaceTXT(states[i]->label, &txtSize, loadedFont, states[i]->fontColor);
-                                TTF_CloseFont(loadedFont);
+                    }
+                    JuicySprite* buttonSprite = element.getEngine()->CreateSprite(&buttonSize, pixelData);
+                    delete[] pixelData;
+                    switch (flag & JUICYGUI_BUTTON_FLAG_MASK_TYPE) {
+                        case JUICYGUI_BUTTON_FLAG_IMAGE: {
+                                /*JD_Point imgSize;
+                                JD_COLOR* imgPixels = element.getEngine()->GetPixelsFromImage(states[i]->label, &imgSize);
+                                if (imgPixels != NULL) {
+                                    JD_Point blendedSize;
+                                    JD_COLOR* blendedPixels = NULL;
+                                    blendedPixels = element.getEngine()->BlendPixels(pixelData, &buttonSize, imgPixels, &imgSize, &blendedSize);
+                                    if (blendedPixels != NULL) {
+                                        delete[] pixelData;
+                                        buttonSize = blendedSize;
+                                        pixelData = blendedPixels;
+                                    }
+                                    delete[] imgPixels;
+                                }*/
                             }
-                            cacheContentRect.w = txtSize.x;
-                            cacheContentRect.h = txtSize.y;
-                            cacheContentRect.x = ((buttonSize.x - txtSize.x) >> 1);
-                            cacheContentRect.y = ((buttonSize.y - txtSize.y) >> 1);
-                        }
-                        break;
-                    default:
-                        break;
+                            break;
+                        case JUICYGUI_BUTTON_FLAG_NORMAL: {
+                                JD_Point textSize;
+                                JD_COLOR* textPixels = element.getEngine()->GetPixelsFromText(states[i]->label, &textSize, states[i]->fontPath, element.getHeight() / 2, states[i]->fontColor, JUICYGUI_CHARSET_STYLE_NORMAL);
+                                if (textPixels != NULL) {
+                                    JuicySprite* textSprite = element.getEngine()->CreateSprite(&textSize, textPixels);
+                                    if (textSprite != NULL) {
+                                        element.getEngine()->BlendSprites(textSprite, buttonSprite);
+                                        element.getEngine()->FreeSprite(textSprite);
+                                    }
+                                    delete[] textPixels;
+                                }
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    textureEngine->AddSprite(buttonSprite);
+                } else {
+                    textureEngine->AddSprite(NULL);
                 }
-                element.getEngine()->BlitSurfaces(cacheContent, cacheDraw, NULL, &cacheContentRect);
-				textureEngine->AddTexture(element.getEngine()->CreateTexture(cacheDraw));
-                if (cacheDraw != NULL) SDL_FreeSurface(cacheDraw);
-                if (cacheContent != NULL) SDL_FreeSurface(cacheContent);
-            } else {
-				textureEngine->AddTexture(NULL);
-			}
+            }
+            element.SetTextureEngine(textureEngine);
         }
-        element.SetTextureEngine(textureEngine);
     }
 }
 

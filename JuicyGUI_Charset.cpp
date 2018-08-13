@@ -2,7 +2,6 @@
 #include "JuicyGUI_Definitions.h"
 #include "JuicyGUI_Charset.h"
 
-#include <iostream>
 
 JuicyGUI_Charset::JuicyGUI_Charset(JuicyGUI* iHostUI, JD_INDEX assignedID, const char* filePath, JD_I fontSize, JD_COLOR fontColor) {
     element.setCredentials(iHostUI, this, assignedID, JUICYGUI_TYPE_ID_CHARSET);
@@ -278,26 +277,23 @@ void JuicyGUI_Charset::getCursor(JD_Point* oPosition) {
 bool JuicyGUI_Charset::createTextures() {
 	if (textureEngine != NULL && charSizes != NULL) {
 		if (properties.fontPath != NULL) {
-			TTF_Font* _Font = TTF_OpenFont(properties.fontPath, properties.fontSize);
-			if (_Font != NULL) {
-				JD_Point charSize;
-				for (JD_INDEX style = 0; style < JUICYGUI_CHARSET_NUM_STYLES; style++) {
-                    TTF_SetFontStyle(_Font, style ? (JUICYGUI_CHARSET_STYLE_BOLD << (style - 1)) : JUICYGUI_CHARSET_STYLE_NORMAL);
-                    char charEnum[] = {0, '\0'};
-                    char* ptrChar = &charEnum[0];
-                    for (JD_INDEX i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
-                        JD_INDEX currentIndex = i + (style * JUICYGUI_CHARSET_SIZE);
-                        TTF_SizeText(_Font, ptrChar, &(charSize.x), &(charSize.y));
-                        if (charSizes[currentIndex] == NULL) {charSizes[currentIndex] = new JD_Point;}
-                        *charSizes[currentIndex] = charSize;
-                        textureEngine->AddSpecificTexture(currentIndex, element.getEngine()->CreateTextureTXT(ptrChar, NULL, _Font, properties.color));
-                        (*ptrChar)++;
-                    }
-				}
-				properties.lineMargin = charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y / JUICYGUI_CHARSET_LINE_MARGIN_DIVISOR;
-				TTF_CloseFont(_Font);
-				return true;
-			}
+            JD_Point charSize;
+            for (JD_INDEX style = 0; style < JUICYGUI_CHARSET_NUM_STYLES; style++) {
+                JD_FLAG fontStyle = style ? (JUICYGUI_CHARSET_STYLE_BOLD << (style - 1)) : JUICYGUI_CHARSET_STYLE_NORMAL;
+                char charEnum[] = {0, '\0'};
+                char* ptrChar = &charEnum[0];
+                for (JD_INDEX i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
+                    JD_INDEX currentIndex = i + (style * JUICYGUI_CHARSET_SIZE);
+                    JD_COLOR* charPixels = element.getEngine()->GetPixelsFromText(ptrChar, &charSize, properties.fontPath, properties.fontSize, properties.color, fontStyle);
+                    textureEngine->AddSpecificSprite(currentIndex, element.getEngine()->CreateSprite(&charSize, charPixels));
+                    if (charPixels != NULL) {delete[] charPixels;}
+                    if (charSizes[currentIndex] == NULL) {charSizes[currentIndex] = new JD_Point;}
+                    *charSizes[currentIndex] = charSize;
+                    (*ptrChar)++;
+                }
+            }
+            properties.lineMargin = charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y / JUICYGUI_CHARSET_LINE_MARGIN_DIVISOR;
+            return true;
 		}
 	}
 	return false;

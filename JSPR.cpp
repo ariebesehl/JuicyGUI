@@ -11,68 +11,82 @@ JSPR::JSPR(JEN* iEngine, JD_INDEX iSize) {
 }
 
 JSPR::~JSPR() {
-	destroy();
+	destroyInstructions();
+	destroySprites();
+}
+
+void JSPR::init(JD_INDEX iSize) {
+	flag = (iSize ? JSPR_FLAG_FIXED : 0) | JSPR_FLAG_INIT;
+	ctrSprites = 0;
+	numSprites = iSize;
+	sprites = NULL;
+	ctrInstructions = 0;
+	numInstructions = 0;
+	instructions = NULL;
 }
 
 void JSPR::Reset() {
-	destroy();
-	init((flag & JSPR_FLAG_FIXED) ? numTextures : 0);
+    flushInstructions();
+    clearSprites();
 }
 
-JD_INDEX JSPR::AddTexture(SDL_Texture* iTexture) {
+JD_INDEX JSPR::AddSprite(JuicySprite* iSprite) {
 	if (flag & JSPR_FLAG_FIXED) {
-		if (textures == NULL) {
-			textures = new SDL_Texture*[numTextures];
-			JDM_NullList((void**)textures, &numTextures);
+		if (sprites == NULL) {
+			sprites = new JuicySprite*[numSprites];
+			JDM_NullList((void**)sprites, &numSprites);
 		}
-		textures[ctrTextures % numTextures] = iTexture;
-		ctrTextures++;
-		return ctrTextures;
+		sprites[ctrSprites % numSprites] = iSprite;
+		ctrSprites++;
+		return ctrSprites;
 	} else {
-	    JDM_AddToList((void***)&textures, &ctrTextures, (void*)iTexture);
-	    numTextures = ctrTextures;
-		return ctrTextures;
+	    if (ctrSprites >= numSprites) {
+            JDM_AddToList((void***)&sprites, &ctrSprites, (void*)iSprite);
+            numSprites = ctrSprites;
+	    } else {
+	        sprites[ctrSprites] = iSprite;
+	        ctrSprites++;
+	    }
+		return ctrSprites;
 	}
 }
-
-void JSPR::AddSpecificTexture(JD_INDEX iIndex, SDL_Texture* iTexture) {
+JD_INDEX JSPR::AddSpecificSprite(JD_INDEX iIndex, JuicySprite* iSprite) {
 	if (flag & JSPR_FLAG_FIXED) {
-		if (textures == NULL) {
-			textures = new SDL_Texture*[numTextures];
-			JDM_NullList((void**)textures, &numTextures);
+		if (sprites == NULL) {
+			sprites = new JuicySprite*[numSprites];
+			JDM_NullList((void**)sprites, &numSprites);
 		}
-		textures[iIndex % numTextures] = iTexture;
+		sprites[iIndex % numSprites] = iSprite;
+		return (iIndex % numSprites);
 	}
+	return 0;
 }
 
-SDL_Texture* JSPR::GetTexture(JD_INDEX iIndex) {
-    return textures[iIndex % numTextures];
+JuicySprite* JSPR::GetSprite(JD_INDEX iIndex) {
+    return sprites[iIndex % numSprites];
 }
+
+
 JD_INDEX JSPR::AddInstruction(JD_INDEX iIndex, const JD_Rect* iRect) {
-    if (ctrInstructions < JSPR_MAX_DRAW_NUM) {
-        if (ctrInstructions >= numInstructions) {
-            JDM_AddToList((void***)&instructions, &numInstructions, (void*)new JSPR_DrawInstruction);
+    if (sprites != NULL) {
+        if (ctrInstructions < JSPR_MAX_DRAW_NUM) {
+            if (ctrInstructions >= numInstructions) {
+                JDM_AddToList((void***)&instructions, &numInstructions, (void*)new JSPR_DrawInstruction);
+            }
+            instructions[ctrInstructions]->index = iIndex;
+            instructions[ctrInstructions]->rect = *iRect;
+            ctrInstructions++;
         }
-        instructions[ctrInstructions]->index = iIndex;
-        instructions[ctrInstructions]->rect = *iRect;
-        ctrInstructions++;
     }
 	return ctrInstructions;
 }
-/*
-JSPR_DrawInstruction* JSPR::GetLastInstruction() {
-	if (instructions != NULL) {
-		return instructions[ctrInstructions];
-	}
-}
-*/
 
 void JSPR::Draw() {
 	if (instructions != NULL) {
 		for (JD_INDEX i = 0; i < ctrInstructions; i++) {
 			if (instructions[i] != NULL)  {
-                JD_INDEX index = (GetTexture(instructions[i]->index) != NULL) ? (instructions[i]->index) : 0;
-				engine->RenderTexture(GetTexture(index), &(instructions[i]->rect));
+                JD_INDEX index = (GetSprite(instructions[i]->index) != NULL) ? (instructions[i]->index) : 0;
+				engine->Render(GetSprite(index), &(instructions[i]->rect));
 			}
 		}
 		if (!(flag & JSPR_FLAG_NOFLUSH)) {
@@ -81,52 +95,43 @@ void JSPR::Draw() {
 	}
 }
 
-void JSPR::init(JD_INDEX iSize) {
-	flag = (iSize ? JSPR_FLAG_FIXED : 0) | JSPR_FLAG_INIT;
-	ctrTextures = 0;
-	numTextures = iSize;
-	textures = NULL;
-	ctrInstructions = 0;
-	numInstructions = 0;
-	instructions = NULL;
-}
 
 void JSPR::flushInstructions() {
-	/*
-	for (JD_INDEX i = 0; i < ctrInstructions; i++) {
-		if (instructions[i] != NULL)  {
-			delete instructions[i];
-			instructions[i] = NULL;
-		}
-	}
-	*/
 	ctrInstructions = 0;
 }
-
-void JSPR::destroy() {
-	destroyInstructions();
-	destroyTextures();
-}
-
-void JSPR::destroyTextures() {
-	if (textures != NULL) {
-		for (JD_INDEX i = 0; i < numTextures; i++) {
-			if (textures[i] != NULL) {
-				SDL_DestroyTexture(textures[i]);
-			}
-		}
-		delete[] textures;
-		textures = NULL;
-	}
-}
-
-void JSPR::destroyInstructions() {
+void JSPR::clearInstructions() {
 	if (instructions != NULL) {
-		for (JD_INDEX i = 0; i < numInstructions; i++) {
+        for (JD_INDEX i = 0; i < numInstructions; i++) {
 			if (instructions[i] != NULL) {
 				delete instructions[i];
+				instructions[i] = NULL;
 			}
-		}
+        }
+        flushInstructions();
+	}
+}
+void JSPR::destroyInstructions() {
+	if (instructions != NULL) {
+        clearInstructions();
 		JDM_DeleteList((void***)&instructions, &numInstructions);
 	}
 }
+
+void JSPR::flushSprites() {
+	ctrSprites = 0;
+}
+void JSPR::clearSprites() {
+	if (sprites != NULL) {
+        for (JD_INDEX i = 0; i < numSprites; i++) {
+            engine->FreeSprite(sprites[i]);
+        }
+        flushSprites();
+	}
+}
+void JSPR::destroySprites() {
+	if (sprites != NULL) {
+        clearSprites();
+		JDM_DeleteList((void***)&sprites, &numSprites);
+	}
+}
+

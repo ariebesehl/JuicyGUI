@@ -72,7 +72,7 @@ JD_INDEX JuicyGUI_Element::getActionIndex(JD_FLAG iAction) {
 void JuicyGUI_Element::updateStatic() {
     if (flag & JUICYGUI_ELEMENTFLAG_STATIC) {
         if (textureEngine != NULL) {
-            textureEngine->ClearInstructions();
+            textureEngine->Clear();
             textureEngine->AddInstruction(getActionIndex(), &rect);
             textureEngine->RepeatDraw(true);
         }
