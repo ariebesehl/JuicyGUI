@@ -56,10 +56,8 @@ bool JEN::runScreenMetrics() {
 
 void JEN::SetMode(JD_FLAG iMode) {
     if (iMode != mode) {
-        bool bufferUsed = screenCanvas != NULL;
-        if (bufferUsed) {destroyBuffer();}
+        destroyBuffer();
         mode = iMode;
-        if (bufferUsed) {createBuffer();}
     }
 }
 
@@ -84,9 +82,28 @@ JuicySprite* JEN::CreateSprite(const JD_Point* iSize, JD_COLOR* iPixeldata) {
         newSprite = new JuicySprite;
         newSprite->dimensions = *iSize;
         newSprite->flag = JUICYSPRITE_TYPE_RAW;
-        newSprite->sprite = (void*)new JD_COLOR[(iSize->x * iSize->y)];
-        for (JD_I i = 0; i < (iSize->x * iSize->y); i++) {
-            ((JD_COLOR*)newSprite->sprite)[i] = iPixeldata[i];
+        newSprite->sprite = (void*)JDM_CopyPixelData(iPixeldata, iSize);
+    }
+    return newSprite;
+}
+JuicySprite* JEN::CreateSpriteFill(const JD_Point* iSize, JD_COLOR iColor) {
+    JuicySprite* newSprite = NULL;
+    if (iSize != NULL) {
+        JD_COLOR* iPixeldata = JDM_InitPixelData(JDM_GetArea(iSize), iColor);
+        newSprite = CreateSprite(iSize, iPixeldata);
+        if (iPixeldata != NULL) {delete[] iPixeldata;}
+    }
+    return newSprite;
+}
+JuicySprite* JEN::CreateSpriteText(const char* iText, const char* iFontpath, JD_I iFontsize, JD_COLOR iFontcolor, JD_FLAG iFontstyle) {
+    JuicySprite* newSprite = NULL;
+    if (iText != NULL && iFontpath != NULL) {
+        newSprite = new JuicySprite;
+        newSprite->flag = JUICYSPRITE_TYPE_RAW;
+        newSprite->sprite = (void*)getPixelsFromText(iText, &(newSprite->dimensions), iFontpath, iFontsize, iFontcolor, iFontstyle);
+        if(newSprite->sprite == NULL) {
+            delete newSprite;
+            newSprite = NULL;
         }
     }
     return newSprite;
@@ -144,11 +161,7 @@ void JEN::RasterizeSprite(JuicySprite* iSprite) {
 SDL_Surface* JEN::createSDL_Surface(const JD_Point* iSize, JD_COLOR* iPixeldata) {
     SDL_Surface* newSurface = NULL;
     if (iSize != NULL && iPixeldata != NULL) {
-        JD_COLOR* newPixeldata = new JD_COLOR[(iSize->x * iSize->y)];
-        for (JD_I i = 0; i < (iSize->x * iSize->y); i++) {
-            newPixeldata[i] = iPixeldata[i];
-        }
-        newSurface = SDL_CreateRGBSurfaceFrom((void*)newPixeldata, iSize->x, iSize->y, JUICYENGINE_LL_DEPTH, JUICYENGINE_LL_BYTESPP * iSize->x, JUICYENGINE_LL_MASKR, JUICYENGINE_LL_MASKG, JUICYENGINE_LL_MASKB, JUICYENGINE_LL_MASKA);
+        newSurface = SDL_CreateRGBSurfaceFrom((void*)JDM_CopyPixelData(iPixeldata, iSize), iSize->x, iSize->y, JUICYENGINE_LL_DEPTH, JUICYENGINE_LL_BYTESPP * iSize->x, JUICYENGINE_LL_MASKR, JUICYENGINE_LL_MASKG, JUICYENGINE_LL_MASKB, JUICYENGINE_LL_MASKA);
         if (newSurface) {
             SDL_SetSurfaceRLE(newSurface, 0x1);
         }
@@ -186,7 +199,7 @@ void JEN::blitSDL_Surfaces(SDL_Surface* iSurf, SDL_Surface* oSurf, const JD_Rect
 
 void JEN::renderSDL_Texture(SDL_Texture* iTexture, const JD_Rect* iRect, SDL_Texture* oTexture) {
     if (iTexture != NULL) {
-		if (oTexture != NULL) {SDL_SetRenderTarget(rendererSDL, oTexture);}
+		SDL_SetRenderTarget(rendererSDL, oTexture);
         SDL_SetRenderDrawBlendMode(rendererSDL, SDL_BLENDMODE_BLEND);
         if (iRect != NULL) {
             SDL_Rect cacheRect = JDM_XSDL_Rect(iRect);
@@ -216,12 +229,11 @@ void JEN::createBuffer() {
             SDL_SetTextureBlendMode((SDL_Texture*)screenCanvas, SDL_BLENDMODE_BLEND);
             break;
         case JUICYENGINE_MODE_SDL_SURFACE: {
-                JD_COLOR* canvasPixels = new JD_COLOR[sizeScreen.x * sizeScreen.y];
-                for (JD_I i = 0; i < (sizeScreen.x * sizeScreen.y); i++) {
-                    canvasPixels[i] = 0x0;
+                JD_COLOR* canvasPixels = JDM_InitPixelData(&sizeScreen, 0x0);
+                if (canvasPixels != NULL) {
+                    screenCanvas = (void*)createSDL_Surface(&sizeScreen, canvasPixels);
+                    delete[] canvasPixels;
                 }
-                screenCanvas = (void*)createSDL_Surface(&sizeScreen, canvasPixels);
-                if (canvasPixels != NULL) {delete[] canvasPixels;}
             }
             break;
         default:
@@ -232,9 +244,11 @@ void JEN::destroyBuffer() {
     switch (mode & JUICYENGINE_MODE_MASK) {
         case JUICYENGINE_MODE_SDL_TEXTURE:
             freeSDL_Texture((SDL_Texture*)screenCanvas);
+            screenCanvas = NULL;
             break;
         case JUICYENGINE_MODE_SDL_SURFACE:
             freeSDL_Surface((SDL_Surface*)screenCanvas);
+            screenCanvas = NULL;
             break;
         default:
             break;
@@ -250,9 +264,11 @@ void JEN::clearBuffer() {
                 SDL_RenderFillRect(rendererSDL, NULL);
                 break;
             case JUICYENGINE_MODE_SDL_SURFACE:
+                SDL_LockSurface((SDL_Surface*)screenCanvas);
                 for (JD_I i = 0; i < (((SDL_Surface*)screenCanvas)->w * ((SDL_Surface*)screenCanvas)->h); i++) {
                     ((JD_COLOR*)(((SDL_Surface*)screenCanvas)->pixels))[i] = 0x0;
                 }
+                SDL_UnlockSurface((SDL_Surface*)screenCanvas);
                 break;
             default:
                 break;
@@ -321,7 +337,9 @@ void JEN::FreeSprite(JuicySprite* iSprite) {
     if (iSprite != NULL) {
         switch ((iSprite->flag) & JUICYSPRITE_TYPE_MASK) {
             case JUICYSPRITE_TYPE_RAW:
-                if (iSprite->sprite != NULL) {delete[] (JD_COLOR*)iSprite->sprite;}
+                if (iSprite->sprite != NULL) {
+                    delete[] (JD_COLOR*)iSprite->sprite;
+                }
                 break;
             case JUICYSPRITE_TYPE_SDL_TEXTURE:
                 freeSDL_Texture((SDL_Texture*)iSprite->sprite);
@@ -333,7 +351,6 @@ void JEN::FreeSprite(JuicySprite* iSprite) {
                 break;
         }
         delete iSprite;
-        iSprite = NULL;
     }
 }
 void JEN::freeSDL_Surface(SDL_Surface* iSurface) {
@@ -343,40 +360,33 @@ void JEN::freeSDL_Surface(SDL_Surface* iSurface, JD_FLAG iFlag) {
 	if (iSurface != NULL) {
         if (iFlag & 0x1) {if (iSurface->pixels != NULL) {delete[] (JD_COLOR*)(iSurface->pixels);}}
 		SDL_FreeSurface(iSurface);
-		iSurface = NULL;
 	}
 }
 void JEN::freeSDL_Texture(SDL_Texture* iTexture) {
 	if (iTexture != NULL) {
 		SDL_DestroyTexture(iTexture);
-		iTexture = NULL;
 	}
 }
 
-JD_COLOR* JEN::GetPixelsFromImage(const char* iFilepath, JD_Point* oSize) {
+JD_COLOR* JEN::getPixelsFromImage(const char* iFilepath, JD_Point* oSize) {
     return (JD_COLOR*)loadSDL_Image(iFilepath, oSize);
 }
 void* JEN::loadSDL_Image(const char* iFilepath, JD_Point* oSize) {
     void* pixelData = NULL;
-    if (oSize != NULL) {
+    if (iFilepath != NULL && oSize != NULL) {
         SDL_Surface* surface = NULL;
         surface = IMG_Load(iFilepath);
         if (surface != NULL) {
             oSize->x = surface->w;
             oSize->y = surface->h;
-            JD_COLOR* surfaceData = (JD_COLOR*)surface->pixels;
-            JD_COLOR* newData = new JD_COLOR[(surface->w * surface->h)];
-            for (JD_I i = 0; i < (surface->w * surface->h); i++) {
-                newData[i] = surfaceData[i];
-            }
+            pixelData = (void*)JDM_CopyPixelData((JD_COLOR*)surface->pixels, (surface->w * surface->h));
             freeSDL_Surface(surface, 0x0);
-            pixelData = (void*)newData;
         }
     }
     return pixelData;
 }
 
-JD_COLOR* JEN::GetPixelsFromText(const char* iText, JD_Point* oSize, const char* iFontpath, JD_I iFontsize, JD_COLOR iFontcolor, JD_FLAG iFontstyle) {
+JD_COLOR* JEN::getPixelsFromText(const char* iText, JD_Point* oSize, const char* iFontpath, JD_I iFontsize, JD_COLOR iFontcolor, JD_FLAG iFontstyle) {
     JD_COLOR* pixelData = NULL;
 	if (iText != NULL && oSize != NULL && iFontpath != NULL) {
 		if (fontSDL == NULL || iFontpath != fontPath || iFontsize != fontSize) {
@@ -400,14 +410,11 @@ JD_COLOR* JEN::GetPixelsFromText(const char* iText, JD_Point* oSize, const char*
             if (surface != NULL) {
                 oSize->x = surface->w;
                 oSize->y = surface->h;
-                JD_COLOR* surfaceData = (JD_COLOR*)(surface->pixels);
-                JD_COLOR* newData = new JD_COLOR[(surface->w * surface->h)];
+                pixelData = JDM_CopyPixelData((JD_COLOR*)(surface->pixels), (surface->w * surface->h));
                 for (JD_I i = 0; i < (surface->w * surface->h); i++) {
-                    JD_COLOR surfacePixel = surfaceData[i];
-                    newData[i] = ((surfacePixel & 0xffffff) << 8) | (surfacePixel >> 24);
+                    pixelData[i] = ((pixelData[i] & 0xffffff) << 8) | (pixelData[i] >> 24);
                 }
                 freeSDL_Surface(surface, 0x0);
-                pixelData = newData;
             }
 		}
 	}
@@ -424,21 +431,31 @@ void JEN::BlendSprites(const JuicySprite* iSrc, JuicySprite* oDst, const JD_Rect
             JDM_EmptyRect(&offsetSrc);
             JDM_EmptyRect(&offsetDst);
             if (iRectSrc != NULL) {
+                offsetSrc.x = (iRectSrc->x <= iSrc->dimensions.x) ? iRectSrc->x : iSrc->dimensions.x;
+                offsetSrc.y = (iRectSrc->y <= iSrc->dimensions.y) ? iRectSrc->y : iSrc->dimensions.y;
+                offsetSrc.w = ((offsetSrc.x + iRectSrc->w) <= iSrc->dimensions.x) ? iRectSrc->w : (iSrc->dimensions.x - offsetSrc.x);
+                offsetSrc.h = ((offsetSrc.y + iRectSrc->h) <= iSrc->dimensions.y) ? iRectSrc->h : (iSrc->dimensions.y - offsetSrc.y);
             } else {
                 JD_Point offsetSrcPos = (oDst->dimensions - iSrc->dimensions) / 2;
                 JDM_SetRectPos(&offsetSrc, &offsetSrcPos);
                 JDM_SetRectSize(&offsetSrc, &(iSrc->dimensions));
             }
             if (iRectDst != NULL) {
+                offsetDst.x = (iRectDst->x <= oDst->dimensions.x) ? iRectDst->x : oDst->dimensions.x;
+                offsetDst.y = (iRectDst->y <= oDst->dimensions.y) ? iRectDst->y : oDst->dimensions.y;
+                offsetDst.w = ((offsetDst.x + iRectDst->w) <= oDst->dimensions.x) ? iRectDst->w : (oDst->dimensions.x - offsetDst.x);
+                offsetDst.h = ((offsetDst.y + iRectDst->h) <= oDst->dimensions.y) ? iRectDst->h : (oDst->dimensions.y - offsetDst.y);
             } else {
                 JDM_SetRectSize(&offsetDst, &(oDst->dimensions));
             }
+            offsetSrc.x += offsetDst.x;
+            offsetSrc.y += offsetDst.y;
             JD_COLOR* pixelSrc = ((JD_COLOR*)(iSrc->sprite));
             JD_COLOR* pixelDst = ((JD_COLOR*)(oDst->sprite));
             for (JD_I y = offsetDst.y; y < offsetDst.y + offsetDst.h; y++) {
                 for (JD_I x = offsetDst.x; x < offsetDst.x + offsetDst.w; x++) {
                     if ((x >= offsetSrc.x) && (x < offsetSrc.x + offsetSrc.w) && (y >= offsetSrc.y) && (y < offsetSrc.y + offsetSrc.h)) {
-                        JD_COLOR colorSrc = pixelSrc[(x - offsetSrc.x) + ((y - offsetSrc.y) * offsetSrc.w)];
+                        JD_COLOR colorSrc = pixelSrc[(x - offsetSrc.x) + ((y - offsetSrc.y) * iSrc->dimensions.x)];
                         JD_COLOR colorDst = pixelDst[x + y * oDst->dimensions.x];
                         pixelDst[x + y * oDst->dimensions.x] = blendPixel(colorSrc, colorDst);
                     }

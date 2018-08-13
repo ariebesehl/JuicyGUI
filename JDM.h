@@ -121,10 +121,16 @@ bool operator== (const JD_Rect& param0, const JD_I& param1);
 JD_INDEX JDM_GetBitIndex(JD_FLAG iFlag);
 JD_INDEX JDM_GetFlagIndex(JD_FLAG iFlag);
 
+JD_COLOR* JDM_InitPixelData(const JD_I iNum, JD_COLOR iColor);
+JD_COLOR* JDM_InitPixelData(const JD_Point* iSize, JD_COLOR iColor);
+JD_COLOR* JDM_CopyPixelData(const JD_COLOR* iPixeldata, const JD_I iNum);
+JD_COLOR* JDM_CopyPixelData(const JD_COLOR* iPixeldata, const JD_Point* iSize);
+
 bool JDM_IsNotEmptyPoint(const JD_Point* iPoint);
 void JDM_EmptyPoint(JD_Point* oPoint);
 JD_I JDM_GetArea(const JD_Point* iPoint);
 JD_I JDM_GetArea(const JD_Rect* iRect);
+
 
 void JDM_EmptyRect(JD_Rect* oRect);
 void JDM_EmptyRectPos(JD_Rect* oRect);

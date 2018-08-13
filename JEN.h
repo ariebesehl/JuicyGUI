@@ -68,9 +68,10 @@ class JEN {
 		void FillScreen(JD_COLOR iColor);
 		void ModScreen(JD_COLOR iColor);
 
-		JD_COLOR* GetPixelsFromImage(const char* iFilepath, JD_Point* oSize);
-		JD_COLOR* GetPixelsFromText(const char* iText, JD_Point* oSize, const char* iFontpath, JD_I iFontsize, JD_COLOR iFontcolor, JD_FLAG iFontstyle);
 		JuicySprite* CreateSprite(const JD_Point* iSize, JD_COLOR* iPixeldata);
+		JuicySprite* CreateSpriteFill(const JD_Point* iSize, JD_COLOR iColor);
+		JuicySprite* CreateSpriteImage(const char* iFilepath);
+		JuicySprite* CreateSpriteText(const char* iText, const char* iFontpath, JD_I iFontsize, JD_COLOR iFontcolor, JD_FLAG iFontstyle);
 		void RasterizeSprite(JuicySprite* iSprite);
 		void BlendSprites(const JuicySprite* iSrc, JuicySprite* oDst);
 		void BlendSprites(const JuicySprite* iSrc, JuicySprite* oDst, const JD_Rect* iRectSrc, const JD_Rect* iRectDst);
@@ -107,6 +108,8 @@ class JEN {
 		const char* fontPath;
 		JD_I fontSize;
 
+		JD_COLOR* getPixelsFromImage(const char* iFilepath, JD_Point* oSize);
+		JD_COLOR* getPixelsFromText(const char* iText, JD_Point* oSize, const char* iFontpath, JD_I iFontsize, JD_COLOR iFontcolor, JD_FLAG iFontstyle);
 		JD_COLOR blendPixel(JD_COLOR iPixel1, JD_COLOR iPixel2);
 	    void* loadSDL_Image(const char* iFilepath, JD_Point* oSize);
 		SDL_Surface* createSDL_Surface(const JD_Point* iSize, JD_COLOR* iPixeldata);

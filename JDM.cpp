@@ -184,6 +184,42 @@ JD_INDEX JDM_GetFlagIndex(JD_FLAG iFlag) {
     return 0;
 }
 
+JD_COLOR* JDM_InitPixelData(const JD_I iNum, JD_COLOR iColor) {
+    JD_COLOR* pixelData = NULL;
+    if (iNum > 0) {
+        pixelData = new JD_COLOR[iNum];
+        for (JD_I i = 0; i < iNum; i++) {
+            pixelData[i] = iColor;
+        }
+    }
+    return pixelData;
+}
+JD_COLOR* JDM_InitPixelData(const JD_Point* iSize, JD_COLOR iColor) {
+    JD_COLOR* pixelData = NULL;
+    if (iSize != NULL) {
+        pixelData = JDM_InitPixelData(JDM_GetArea(iSize), iColor);
+    }
+    return pixelData;
+}
+JD_COLOR* JDM_CopyPixelData(const JD_COLOR* iPixeldata, const JD_I iNum) {
+    JD_COLOR* pixelCopy = NULL;
+    if (iPixeldata != NULL && iNum) {
+        pixelCopy = new JD_COLOR[iNum];
+        for (JD_I i = 0; i < iNum; i++) {
+            pixelCopy[i] = iPixeldata[i];
+        }
+    }
+    return pixelCopy;
+}
+JD_COLOR* JDM_CopyPixelData(const JD_COLOR* iPixeldata, const JD_Point* iSize) {
+    JD_COLOR* pixelCopy = NULL;
+    if (iSize != NULL) {
+        pixelCopy = JDM_CopyPixelData(iPixeldata, JDM_GetArea(iSize));
+    }
+    return pixelCopy;
+}
+
+
 bool JDM_IsNotEmptyPoint(const JD_Point* iPoint) {
     return iPoint->x && iPoint->y;
 }

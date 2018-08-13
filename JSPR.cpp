@@ -124,6 +124,7 @@ void JSPR::clearSprites() {
 	if (sprites != NULL) {
         for (JD_INDEX i = 0; i < numSprites; i++) {
             engine->FreeSprite(sprites[i]);
+            sprites[i] = NULL;
         }
         flushSprites();
 	}

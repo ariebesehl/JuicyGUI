@@ -160,7 +160,7 @@ void JuicyGUI_Charset::newLine(bool iEnable) {
 
 void JuicyGUI_Charset::carrierReturn(void) {
     newLine(false);
-    element.setPosY(element.getPosY() + charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->x + properties.lineMargin);
+    element.setPosY(element.getPosY() + charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y + properties.lineMargin);
 }
 
 void JuicyGUI_Charset::printerChar(JD_INDEX iCharNum, JD_INDEX options) {
@@ -277,22 +277,23 @@ void JuicyGUI_Charset::getCursor(JD_Point* oPosition) {
 bool JuicyGUI_Charset::createTextures() {
 	if (textureEngine != NULL && charSizes != NULL) {
 		if (properties.fontPath != NULL) {
-            JD_Point charSize;
             for (JD_INDEX style = 0; style < JUICYGUI_CHARSET_NUM_STYLES; style++) {
                 JD_FLAG fontStyle = style ? (JUICYGUI_CHARSET_STYLE_BOLD << (style - 1)) : JUICYGUI_CHARSET_STYLE_NORMAL;
                 char charEnum[] = {0, '\0'};
                 char* ptrChar = &charEnum[0];
                 for (JD_INDEX i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
                     JD_INDEX currentIndex = i + (style * JUICYGUI_CHARSET_SIZE);
-                    JD_COLOR* charPixels = element.getEngine()->GetPixelsFromText(ptrChar, &charSize, properties.fontPath, properties.fontSize, properties.color, fontStyle);
-                    textureEngine->AddSpecificSprite(currentIndex, element.getEngine()->CreateSprite(&charSize, charPixels));
-                    if (charPixels != NULL) {delete[] charPixels;}
+                    textureEngine->AddSpecificSprite(currentIndex, element.getEngine()->CreateSpriteText(ptrChar, properties.fontPath, properties.fontSize, properties.color, fontStyle));
                     if (charSizes[currentIndex] == NULL) {charSizes[currentIndex] = new JD_Point;}
-                    *charSizes[currentIndex] = charSize;
+                    if (textureEngine->GetSprite(currentIndex) != NULL) {
+                        *charSizes[currentIndex] = textureEngine->GetSprite(currentIndex)->dimensions;
+                    } else {
+                        JDM_EmptyPoint(charSizes[currentIndex]);
+                    }
                     (*ptrChar)++;
                 }
             }
-            properties.lineMargin = charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y / JUICYGUI_CHARSET_LINE_MARGIN_DIVISOR;
+            properties.lineMargin = charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y * JUICYGUI_CHARSET_LINE_MARGIN_PERCENT / 100;
             return true;
 		}
 	}

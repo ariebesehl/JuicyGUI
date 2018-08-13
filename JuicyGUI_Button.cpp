@@ -135,15 +135,10 @@ void JuicyGUI_Button::createTextures() {
                             }
                             break;
                         case JUICYGUI_BUTTON_FLAG_NORMAL: {
-                                JD_Point textSize;
-                                JD_COLOR* textPixels = element.getEngine()->GetPixelsFromText(states[i]->label, &textSize, states[i]->fontPath, element.getHeight() / 2, states[i]->fontColor, JUICYGUI_CHARSET_STYLE_NORMAL);
-                                if (textPixels != NULL) {
-                                    JuicySprite* textSprite = element.getEngine()->CreateSprite(&textSize, textPixels);
-                                    if (textSprite != NULL) {
-                                        element.getEngine()->BlendSprites(textSprite, buttonSprite);
-                                        element.getEngine()->FreeSprite(textSprite);
-                                    }
-                                    delete[] textPixels;
+                                JuicySprite* textSprite = element.getEngine()->CreateSpriteText(states[i]->label, states[i]->fontPath, element.getHeight() / 2, states[i]->fontColor, JUICYGUI_CHARSET_STYLE_NORMAL);
+                                if (textSprite != NULL) {
+                                    element.getEngine()->BlendSprites(textSprite, buttonSprite);
+                                    element.getEngine()->FreeSprite(textSprite);
                                 }
                             }
                             break;
