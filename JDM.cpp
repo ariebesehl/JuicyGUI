@@ -166,10 +166,22 @@ bool operator== (const JD_Rect& param0, const int& param1) {
     return ((param0.x == param1) && (param0.y == param1) && (param0.w == param1) && (param0.h == param1));
 }
 
+JD_FLAG JDM_GetLSB(JD_FLAG iFlag) {
+    for (JD_INDEX i = 0; i < JDM_BITS; i++) {
+        if (iFlag & (1 << i)) {return (iFlag & (1 << i));}
+    }
+    return 0;
+}
+JD_FLAG JDM_GetMSB(JD_FLAG iFlag) {
+    for (JD_INDEX i = JDM_BITS; i > 0; i--) {
+        if (iFlag & (1 << (i - 1))) {return (iFlag & (1 << (i - 1)));}
+    }
+    return 0;
+}
 JD_INDEX JDM_GetBitIndex(JD_FLAG iFlag) {
     JD_INDEX i = 0;
     while (i < JDM_BITS) {
-        if ((iFlag << i) & 1) {return i;}
+        if ((iFlag >> i) & 1) {return i;}
         i++;
     }
     return i;
@@ -221,7 +233,7 @@ JD_COLOR* JDM_CopyPixelData(const JD_COLOR* iPixeldata, const JD_Point* iSize) {
 
 
 bool JDM_IsNotEmptyPoint(const JD_Point* iPoint) {
-    return iPoint->x && iPoint->y;
+    return iPoint->x || iPoint->y;
 }
 
 void JDM_EmptyPoint(JD_Point* oPoint) {

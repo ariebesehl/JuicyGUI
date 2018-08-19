@@ -9,7 +9,7 @@
 
 typedef struct {
     JD_INDEX id;
-    JD_FLAG action;
+    JD_FLAG type;
 } JuicyGUI_Event;
 
 class JuicyGUI {
@@ -48,8 +48,8 @@ class JuicyGUI {
         JD_INDEX numElement;
         JuicyGUI_Element** elements;
 
-        JD_INDEX numAction;
-        JD_INDEX ctrAction;
+        JD_INDEX numEvents;
+        JD_INDEX ctrEvents;
         JuicyGUI_Event** events;
 
         void updateMouse();

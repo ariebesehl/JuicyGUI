@@ -6,26 +6,31 @@
 
 typedef struct {
     JD_COLOR color;
-    JD_COLOR borderColor;
-    int borderSize;
+    JD_COLOR frameColor;
+    int frameSize;
 } JuicyGUI_Box_Properties;
 
 
 class JuicyGUI_Box {
     public:
+        JuicyGUI_Box(JuicyGUI* iHostUI, JD_INDEX iAssignedID);
+        JuicyGUI_Box(JuicyGUI* iHostUI, JD_INDEX iAssignedID, JD_Rect* iDimensions);
         JuicyGUI_Box(JuicyGUI* iHostUI, JD_INDEX iAssignedID, JD_Rect* iDimensions, JD_COLOR iColor, JD_COLOR iBorderColor);
         ~JuicyGUI_Box(void);
-        void enable(bool iEnabled) {element.enable(iEnabled);};
-        void show(bool iShow) {element.show(iShow);};
-        void setBorderSize(int iSize) {properties.borderSize = iSize; resetTextures();}; // TODO make this work with negative values
-        void setPos(const JD_Point* iPosition) {element.setPos(iPosition);};
-        void getPos(JD_Point* oPosition) {element.getPos(oPosition);};
-        const JD_Rect* getRect(void) {return element.getRect();};
-        void setRect(const JD_Rect* iRect) {if(element.setRect(iRect)) resetTextures();};
+        void Enable(bool iEnabled) {element.enable(iEnabled);};
+        void Show(bool iShow) {element.show(iShow);};
+        //void SetFrameSize(int iSize) {properties.frameSize = iSize; resetTextures();}; // TODO make this work with negative values
+        void SetPos(const JD_Point* iPosition) {element.setPos(iPosition);};
+        void GetPos(JD_Point* oPosition) {element.getPos(oPosition);};
+        const JD_Rect* GetRect(void) {return element.getRect();};
+        void SetRect(const JD_Rect* iRect) {if(element.setRect(iRect)) resetTextures();};
+        JD_I GetFrameSize();
+        JD_I GetFrameSize(JD_FLAG iEvent);
     private:
-		JSPR* textureEngine;
         JuicyGUI_Element element;
-        JuicyGUI_Box_Properties properties;
+        JuicyGUI_Box_Properties* defaultProperties;
+		void init(JuicyGUI* iHostUI, JD_INDEX iID, JD_Rect* iDimensions, JD_COLOR iColor, JD_COLOR iFrameColor);
+		void initDefault(JD_COLOR iColor, JD_COLOR iFrameColor);
         void createTextures(void);
         void resetTextures(void);
 };

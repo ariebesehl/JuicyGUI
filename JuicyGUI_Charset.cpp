@@ -3,29 +3,49 @@
 #include "JuicyGUI_Charset.h"
 
 
-JuicyGUI_Charset::JuicyGUI_Charset(JuicyGUI* iHostUI, JD_INDEX assignedID, const char* filePath, JD_I fontSize, JD_COLOR fontColor) {
-    element.setCredentials(iHostUI, this, assignedID, JUICYGUI_TYPE_ID_CHARSET);
-    properties.fontPath = filePath;
-    properties.fontSize = fontSize;
-    properties.color = fontColor;
-    properties.fillColor = ~fontColor | 0xff;
-	properties.style = JUICYGUI_CHARSET_STYLE_NORMAL;
-	setStyleOffset();
+JuicyGUI_Charset::JuicyGUI_Charset(JuicyGUI* iHostUI, JD_INDEX assignedID, const char* iFontPath, JD_I iFontSize, JD_COLOR iFontColor) {
 	JD_INDEX totalSize = JUICYGUI_CHARSET_NUM_STYLES * JUICYGUI_CHARSET_SIZE;
-	textureEngine = NULL;
-	textureEngine = new JSPR(element.getEngine(), totalSize);
-	element.SetTextureEngine(textureEngine);
+    element.setCredentials(iHostUI, this, new JPM(), new JSPR(iHostUI->GetEngine(), totalSize), assignedID, JUICYGUI_TYPE_ID_CHARSET);
+    initDefault(iFontPath, iFontSize, iFontColor);
+	setStyleOffset();
 	charSizes = NULL;
 	charSizes = new JD_Point*[totalSize];
 	JDM_NullList((void**)charSizes, &totalSize);
     createTextures();
 }
 
+void JuicyGUI_Charset::initDefault(const char* iFontpath, JD_I iFontSize, JD_COLOR iFontColor) {
+    JuicyGUI_Charset_Properties* polledProps = NULL;
+    JD_FLAG eventType = JUICYGUI_EVENT_NONE;
+    while (element.properties->PollProperties((void**)&polledProps, &eventType)) {
+        switch (eventType) {
+            case JUICYGUI_EVENT_NONE:
+                if (polledProps == NULL) {
+                    polledProps = new JuicyGUI_Charset_Properties;
+                    element.properties->SetProperties(eventType, (void*)polledProps);
+                }
+                polledProps->fontPath = iFontpath;
+                polledProps->color = iFontColor;
+                polledProps->fillColor = -iFontColor | 0xff;
+                polledProps->fontSize = iFontSize;
+                polledProps->style = JUICYDEFAULT_CHARSET_PROPERTIES_STYLE;
+                break;
+            default:
+                break;
+        }
+    }
+    defaultProperties = (JuicyGUI_Charset_Properties*)element.properties->GetProperties(JUICYGUI_EVENT_NONE);
+}
+
 JuicyGUI_Charset::~JuicyGUI_Charset() {
-	if (textureEngine != NULL) {
-        delete textureEngine;
-        textureEngine = NULL;
-	}
+    if (element.properties != NULL) {
+        JuicyGUI_Charset_Properties* ptrProps = NULL;
+        while (element.properties->PollProperties((void**)&ptrProps, NULL)) {
+            if (ptrProps != NULL) {
+                delete ptrProps;
+            }
+        }
+    }
 	if (charSizes != NULL) {
         for (JD_INDEX i = 0; i < JUICYGUI_CHARSET_NUM_STYLES * JUICYGUI_CHARSET_SIZE; i++) {
             if (charSizes[i] != NULL) {
@@ -38,47 +58,44 @@ JuicyGUI_Charset::~JuicyGUI_Charset() {
 	}
 }
 
-void JuicyGUI_Charset::printTXT(const char* text, JD_Point* iPosition) {
-    setCursor(iPosition);
+void JuicyGUI_Charset::PrintTXT(const char* text, JD_Point* iPosition) {
+    SetCursor(iPosition);
     printer(text);
 }
 
-void JuicyGUI_Charset::printlnTXT(const char* text, JD_Point* iPosition) {
-    setCursor(iPosition);
-    newLine(true);
+void JuicyGUI_Charset::PrintlnTXT(const char* text, JD_Point* iPosition) {
+    SetCursor(iPosition);
     printer(text);
     carrierReturn();
 }
 
-void JuicyGUI_Charset::printINT(JD_I iInteger, JD_Point* iPosition) {
-    setCursor(iPosition);
+void JuicyGUI_Charset::PrintINT(JD_I iInteger, JD_Point* iPosition) {
+    SetCursor(iPosition);
     printerINT(iInteger);
 }
 
-void JuicyGUI_Charset::printlnINT(JD_I iInteger, JD_Point* iPosition) {
-    setCursor(iPosition);
-    newLine(true);
+void JuicyGUI_Charset::PrintlnINT(JD_I iInteger, JD_Point* iPosition) {
+    SetCursor(iPosition);
     printerINT(iInteger);
     carrierReturn();
 }
 
-void JuicyGUI_Charset::printHEX(JD_I iInteger, JD_Point* iPosition) {
-    setCursor(iPosition);
+void JuicyGUI_Charset::PrintHEX(JD_I iInteger, JD_Point* iPosition) {
+    SetCursor(iPosition);
     printerHEX(iInteger);
 }
 
-void JuicyGUI_Charset::printlnHEX(JD_I iInteger, JD_Point* iPosition) {
-    setCursor(iPosition);
-    newLine(true);
+void JuicyGUI_Charset::PrintlnHEX(JD_I iInteger, JD_Point* iPosition) {
+    SetCursor(iPosition);
     printerHEX(iInteger);
     carrierReturn();
 }
 
-void JuicyGUI_Charset::getSizeTXT(const char* text, JD_Point* target) {
+void JuicyGUI_Charset::GetSizeTXT(const char* text, JD_Point* target) {
     sizer(text, target);
 }
 
-void JuicyGUI_Charset::getSizeINT(JD_I integer, JD_Point* target) {
+void JuicyGUI_Charset::GetSizeINT(JD_I integer, JD_Point* target) {
     sizerINT(integer, target);
 }
 
@@ -150,26 +167,26 @@ void JuicyGUI_Charset::printerHEX(JD_I iInteger) {
 }
 
 void JuicyGUI_Charset::newLine(bool iEnable) {
-    static JD_Point cache;
+    static JD_I posX;
     if (iEnable) {
-        element.getPos(&cache);
+        posX = element.getPosX();
     } else {
-        element.setPos(&cache);
+        element.setPosX(posX);
     }
 }
 
 void JuicyGUI_Charset::carrierReturn(void) {
     newLine(false);
-    element.setPosY(element.getPosY() + charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y + properties.lineMargin);
+    element.setPosY(element.getPosY() + charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y + defaultProperties->lineMargin);
 }
 
 void JuicyGUI_Charset::printerChar(JD_INDEX iCharNum, JD_INDEX options) {
-    if (textureEngine != NULL) {
+    if (element.GetSprites() != NULL) {
         iCharNum &= JUICYGUI_CHARSET_MASK;
         iCharNum += styleOffset;
         JD_Rect cursorRect = *(element.getRect());
         JDM_SetRectSize(&cursorRect, charSizes[iCharNum]);
-        textureEngine->AddInstruction(iCharNum, &cursorRect);
+        element.GetSprites()->AddInstruction(iCharNum, &cursorRect);
         element.setPosX(element.getPosX() + charSizes[iCharNum]->x);
     }
 }
@@ -255,45 +272,46 @@ void JuicyGUI_Charset::sizerHEX(JD_I integer, JD_Point* target) {
 }
 
 
-void JuicyGUI_Charset::setFontSize(JD_I iFontSize) {
-    if (properties.fontSize != iFontSize) {
-        properties.fontSize = iFontSize;
+void JuicyGUI_Charset::SetFontSize(JD_I iFontSize) {
+    if (defaultProperties->fontSize != iFontSize) {
+        defaultProperties->fontSize = iFontSize;
         resetTextures();
     }
 }
 
-void JuicyGUI_Charset::setCursor(JD_Point* iPosition) {
+void JuicyGUI_Charset::SetCursor(JD_Point* iPosition) {
     if (iPosition != NULL) {
         element.setPos(iPosition);
+        newLine(true);
     }
 }
 
-void JuicyGUI_Charset::getCursor(JD_Point* oPosition) {
+void JuicyGUI_Charset::GetCursor(JD_Point* oPosition) {
     if (oPosition != NULL) {
         element.getPos(oPosition);
     }
 }
 
 bool JuicyGUI_Charset::createTextures() {
-	if (textureEngine != NULL && charSizes != NULL) {
-		if (properties.fontPath != NULL) {
+	if (element.GetSprites() != NULL && element.getEngine() != NULL && charSizes != NULL) {
+		if (defaultProperties->fontPath != NULL) {
             for (JD_INDEX style = 0; style < JUICYGUI_CHARSET_NUM_STYLES; style++) {
                 JD_FLAG fontStyle = style ? (JUICYGUI_CHARSET_STYLE_BOLD << (style - 1)) : JUICYGUI_CHARSET_STYLE_NORMAL;
                 char charEnum[] = {0, '\0'};
                 char* ptrChar = &charEnum[0];
                 for (JD_INDEX i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
                     JD_INDEX currentIndex = i + (style * JUICYGUI_CHARSET_SIZE);
-                    textureEngine->AddSpecificSprite(currentIndex, element.getEngine()->CreateSpriteText(ptrChar, properties.fontPath, properties.fontSize, properties.color, fontStyle));
+                    element.GetSprites()->AddSpecificSprite(currentIndex, element.getEngine()->CreateSpriteText(ptrChar, defaultProperties->fontPath, defaultProperties->fontSize, defaultProperties->color, fontStyle));
                     if (charSizes[currentIndex] == NULL) {charSizes[currentIndex] = new JD_Point;}
-                    if (textureEngine->GetSprite(currentIndex) != NULL) {
-                        *charSizes[currentIndex] = textureEngine->GetSprite(currentIndex)->dimensions;
+                    if (element.GetSprites()->GetSprite(currentIndex) != NULL) {
+                        *charSizes[currentIndex] = element.GetSprites()->GetSprite(currentIndex)->dimensions;
                     } else {
                         JDM_EmptyPoint(charSizes[currentIndex]);
                     }
                     (*ptrChar)++;
                 }
             }
-            properties.lineMargin = charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y * JUICYGUI_CHARSET_LINE_MARGIN_PERCENT / 100;
+            defaultProperties->lineMargin = charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y * JUICYGUI_CHARSET_LINE_MARGIN_PERCENT / 100;
             return true;
 		}
 	}
@@ -301,17 +319,19 @@ bool JuicyGUI_Charset::createTextures() {
 }
 
 void JuicyGUI_Charset::resetTextures() {
-	textureEngine->Reset();
+	if (element.GetSprites() != NULL) {
+        element.GetSprites()->Reset();
+	}
     createTextures();
 }
 
 void JuicyGUI_Charset::setStyleOffset() {
-    styleOffset = JDM_GetFlagIndex(properties.style) * JUICYGUI_CHARSET_SIZE;
+    styleOffset = JDM_GetFlagIndex(defaultProperties->style) * JUICYGUI_CHARSET_SIZE;
 }
 
-void JuicyGUI_Charset::setStyle(JD_FLAG iStyle){
+void JuicyGUI_Charset::SetStyle(JD_FLAG iStyle){
     if (JDM_GetFlagIndex(iStyle) <= JUICYGUI_CHARSET_NUM_STYLES) {
-        properties.style = iStyle;
+        defaultProperties->style = iStyle;
         setStyleOffset();
     }
 }

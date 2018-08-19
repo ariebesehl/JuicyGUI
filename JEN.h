@@ -41,6 +41,7 @@
 typedef struct {
 	JD_FLAG flag;
 	JD_Point dimensions;
+	JD_COLOR* pixels;
 	void* sprite;
 } JuicySprite;
 
@@ -94,6 +95,7 @@ class JEN {
 	    JD_INDEX numFrames;
 	    JD_INDEX numFps;
 
+	    void runTimeMetrics();
 		bool runScreenMetrics();
 
 		void createBuffer();
@@ -111,8 +113,11 @@ class JEN {
 		JD_COLOR* getPixelsFromImage(const char* iFilepath, JD_Point* oSize);
 		JD_COLOR* getPixelsFromText(const char* iText, JD_Point* oSize, const char* iFontpath, JD_I iFontsize, JD_COLOR iFontcolor, JD_FLAG iFontstyle);
 		JD_COLOR blendPixel(JD_COLOR iPixel1, JD_COLOR iPixel2);
+		void clearSprite(JuicySprite* iSprite);
 	    void* loadSDL_Image(const char* iFilepath, JD_Point* oSize);
+
 		SDL_Surface* createSDL_Surface(const JD_Point* iSize, JD_COLOR* iPixeldata);
+		SDL_Surface* createSDL_Surface(const JD_Point* iSize, JD_COLOR* iPixeldata, JD_FLAG iFlag);
 		SDL_Texture* createSDL_Texture(SDL_Surface* iSurface) {if (iSurface != NULL) {return SDL_CreateTextureFromSurface(rendererSDL, iSurface);} else {return NULL;}};
 		void freeSDL_Surface(SDL_Surface* iSurface);
 		void freeSDL_Surface(SDL_Surface* iSurface, JD_FLAG iFlag);

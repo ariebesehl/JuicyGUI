@@ -8,31 +8,46 @@
 
 JuicyGUI::JuicyGUI(SDL_Window* iWindow, SDL_Renderer* iRenderer, SDL_Event* iEvent) {
     engine = new JEN(iWindow, iRenderer);
-    element.setCredentials(this, this, JUICYGUI_LOWLVL_ROOT_ID_NUM, JUICYGUI_TYPE_ID_GUI);
+    element.setCredentials(this, this, NULL, NULL, JUICYGUI_LOWLVL_ROOT_ID_NUM, JUICYGUI_TYPE_ID_GUI);
     element.setRect(engine->GetWindowRect());
     elements = NULL;
     numElement = 0;
-    ctrAction = 0;
-    numAction = 0;
+    ctrEvents = 0;
+    numEvents = 0;
     events = NULL;
 }
 
 JuicyGUI::~JuicyGUI() {
     if (events != NULL) {
-        for (JD_INDEX i = 0; i < numAction; i++) {
+        for (JD_INDEX i = 0; i < numEvents; i++) {
             if (events[i] != NULL) {
                 delete events[i];
             }
         }
-        JDM_DeleteList((void***)&events, &numAction);
+        JDM_DeleteList((void***)&events, &numEvents);
     }
     if (elements != NULL) {
         for (JD_INDEX i = 0; i < numElement; i++) {
         if (elements[i] != NULL) {
-                delete elements[i];
+                switch (elements[i]->getType()) {
+                    case JUICYGUI_TYPE_ID_BOX:
+                        delete (JuicyGUI_Box*)(elements[i]->getOwner());
+                        break;
+                    case JUICYGUI_TYPE_ID_CHARSET:
+                        delete (JuicyGUI_Charset*)(elements[i]->getOwner());
+                        break;
+                    case JUICYGUI_TYPE_ID_BUTTON:
+                        delete (JuicyGUI_Button*)(elements[i]->getOwner());
+                        break;
+                    default:
+                        break;
+                }
             }
         }
         JDM_DeleteList((void***)&elements, &numElement);
+    }
+    if (engine != NULL) {
+        delete engine;
     }
 }
 
@@ -51,32 +66,32 @@ bool JuicyGUI::registerElement(JuicyGUI_Element* iElement) {
 JD_FLAG JuicyGUI::UpdateState(JuicyGUI_Event*** oEvent, JD_INDEX* numElements) {
     static JD_INDEX numIteration = 0;
 
-    element.setAction(JUICYGUI_ACTION_NONE);
+    element.setEvent(JUICYGUI_EVENT_NONE);
     if (engine->LoopHandle() && numIteration) {
         JD_Point screenSize;
         engine->GetWindowSize(&screenSize);
         element.setSize(&screenSize);
-        element.attachAction(JUICYGUI_ACTION_RESIZE);
+        element.attachEvent(JUICYGUI_EVENT_RESIZE);
     }
 
     updateMouse();
 
-    ctrAction = 0;
+    ctrEvents = 0;
     for (JD_INDEX i = 0; i < (1 + numElement); i++) {
-        if (i ? evaluateElement(elements[i-1]) : (element.getAction() != JUICYGUI_ACTION_NONE)) {
-            if (ctrAction >= numAction) {
-                JDM_AddToList((void***)&events, &numAction, (void*)new JuicyGUI_Event);
+        if (i ? evaluateElement(elements[i-1]) : (element.getEvent() != JUICYGUI_EVENT_NONE)) {
+            if (ctrEvents >= numEvents) {
+                JDM_AddToList((void***)&events, &numEvents, (void*)new JuicyGUI_Event);
             }
-            events[ctrAction]->id = i ? (elements[i-1]->getID()) : element.getID();
-            events[ctrAction]->action = i ? (elements[i-1]->getAction()) : element.getAction();
-            ctrAction++;
+            events[ctrEvents]->id = i ? (elements[i-1]->getID()) : element.getID();
+            events[ctrEvents]->type = i ? (elements[i-1]->getEvent()) : element.getEvent();
+            ctrEvents++;
         }
     }
-    if (numElements != NULL) {*numElements = ctrAction;}
+    if (numElements != NULL) {*numElements = ctrEvents;}
     if (oEvent != NULL) {*oEvent = events;}
 
     numIteration++;
-    return element.getAction();
+    return element.getEvent();
 }
 
 
@@ -98,17 +113,18 @@ void JuicyGUI::DrawElements(void) {
 }
 
 bool JuicyGUI::evaluateElement(JuicyGUI_Element* iElement) {
-    JD_FLAG state = JUICYGUI_ACTION_NONE;
+    JD_FLAG currentEvent = JUICYGUI_EVENT_NONE;
     if (!(iElement->getFlag() & JUICYGUI_ELEMENTFLAG_DISABLED) && (iElement->getFlag() & JUICYGUI_ELEMENTFLAG_SHOW)) {
         if (mouseOver(iElement->getRect())) { // Mouse over?
-            state |= JUICYGUI_ACTION_HOVER;
-            state |= (mouseState & JUICYGUI_CONTROL_ID_LMB) ? JUICYGUI_ACTION_PRESSED : JUICYGUI_ACTION_NONE;
-            state |= (mouseState & JUICYGUI_CONTROL_ID_LMB_RELEASED) ? JUICYGUI_ACTION_RELEASED : JUICYGUI_ACTION_NONE;
+            currentEvent |= JUICYGUI_EVENT_HOVER;
+            currentEvent |= (mouseState & JUICYGUI_CONTROL_ID_LMB) ? JUICYGUI_EVENT_PRESSED : JUICYGUI_EVENT_NONE;
+            currentEvent |= (mouseState & JUICYGUI_CONTROL_ID_LMB_CLICKED) ? JUICYGUI_EVENT_CLICKED : JUICYGUI_EVENT_NONE;
+            currentEvent |= (mouseState & JUICYGUI_CONTROL_ID_LMB_RELEASED) ? JUICYGUI_EVENT_RELEASED : JUICYGUI_EVENT_NONE;
         }
     }
-    if (iElement->getAction() != state) {
-        iElement->setAction(state);
-        iElement->updateStatic();
+    if (iElement->getEvent() != currentEvent) {
+        iElement->setEvent(currentEvent);
+        iElement->UpdateSprites();
         return true;
     }
     return false;

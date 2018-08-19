@@ -1,4 +1,4 @@
-
+#include <iostream>
 #include "JSPR.h"
 
 JSPR::JSPR(JEN* iEngine) {
@@ -63,7 +63,7 @@ JD_INDEX JSPR::AddSpecificSprite(JD_INDEX iIndex, JuicySprite* iSprite) {
 }
 
 JuicySprite* JSPR::GetSprite(JD_INDEX iIndex) {
-    return sprites[iIndex % numSprites];
+    if (sprites != NULL) {return sprites[iIndex % numSprites];} else {return NULL;}
 }
 
 
@@ -85,8 +85,8 @@ void JSPR::Draw() {
 	if (instructions != NULL) {
 		for (JD_INDEX i = 0; i < ctrInstructions; i++) {
 			if (instructions[i] != NULL)  {
-                JD_INDEX index = (GetSprite(instructions[i]->index) != NULL) ? (instructions[i]->index) : 0;
-				engine->Render(GetSprite(index), &(instructions[i]->rect));
+                JuicySprite* sprite = (GetSprite(instructions[i]->index) != NULL) ? (GetSprite(instructions[i]->index)) : GetSprite(0);
+				if (sprite != NULL) {engine->Render(sprite, &(instructions[i]->rect));}
 			}
 		}
 		if (!(flag & JSPR_FLAG_NOFLUSH)) {

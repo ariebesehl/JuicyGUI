@@ -117,6 +117,8 @@ void operator>>= (JD_2I& param0, const JD_I& param1);
 
 bool operator== (const JD_Rect& param0, const JD_I& param1);
 
+JD_FLAG JDM_GetLSB(JD_FLAG iFlag);
+JD_FLAG JDM_GetMSB(JD_FLAG iFlag);
 
 JD_INDEX JDM_GetBitIndex(JD_FLAG iFlag);
 JD_INDEX JDM_GetFlagIndex(JD_FLAG iFlag);

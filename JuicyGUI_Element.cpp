@@ -7,8 +7,9 @@ JuicyGUI_Element::JuicyGUI_Element() {
     registered = false;
     host = NULL;
     owner = NULL;
+    properties = NULL;
     engine = NULL;
-    textureEngine = NULL;
+    sprites = NULL;
     id = JUICYGUI_LOWLVL_EMPTY_ID_NUM;
     rect.x = JUICYGUI_LOWLVL_EMPTY_POS_X;
     rect.y = JUICYGUI_LOWLVL_EMPTY_POS_Y;
@@ -16,11 +17,11 @@ JuicyGUI_Element::JuicyGUI_Element() {
     rect.h = JUICYGUI_LOWLVL_EMPTY_HEIGHT;
     type = JUICYGUI_TYPE_ID_NONE;
     flag = JUICYGUI_ELEMENTFLAG_INIT;
-    action = JUICYGUI_ACTION_NONE;
+    event = JUICYGUI_EVENT_NONE;
 }
 
-JuicyGUI_Element::JuicyGUI_Element(JuicyGUI* iHostUI, void* iOwner, JD_INDEX iID, JD_INDEX iType, const JD_Rect* iDimensions) {
-    setCredentials(iHostUI, iOwner, iID, iType);
+JuicyGUI_Element::JuicyGUI_Element(JuicyGUI* iHostUI, void* iOwner, JPM* iProperties, JSPR* iSprites, JD_INDEX iID, JD_INDEX iType, const JD_Rect* iDimensions) {
+    setCredentials(iHostUI, iOwner, iProperties, iSprites, iID, iType);
     if (iDimensions != NULL) {
         rect = *iDimensions;
     } else {
@@ -31,22 +32,24 @@ JuicyGUI_Element::JuicyGUI_Element(JuicyGUI* iHostUI, void* iOwner, JD_INDEX iID
     }
 }
 
-JuicyGUI_Element::~JuicyGUI_Element(void) {}
+JuicyGUI_Element::~JuicyGUI_Element(void) {
+    if (sprites != NULL) {delete sprites;}
+    if (properties != NULL) {delete properties;}
+}
 
 
-void JuicyGUI_Element::setCredentials(JuicyGUI* iHostUI, void* iOwner, JD_INDEX iID, JD_INDEX iType) {
+void JuicyGUI_Element::setCredentials(JuicyGUI* iHostUI, void* iOwner, JPM* iProperties, JSPR* iSprites, JD_INDEX iID, JD_INDEX iType) {
     host = iHostUI;
     owner = iOwner;
     root = (owner != NULL && host == owner);
+    properties = iProperties;
+    sprites = iSprites;
     id = iID;
     type = iType;
     flag = JUICYGUI_ELEMENTFLAG_INIT | ((type & JUICYGUI_ID_STATIC_TYPES) ? JUICYGUI_ELEMENTFLAG_STATIC : 0x0);
-    action = JUICYGUI_ACTION_NONE;
-    JDM_EmptyRect(&rect);
-    /*rect.x = JUICYGUI_LOWLVL_EMPTY_POS_X;
-    rect.y = JUICYGUI_LOWLVL_EMPTY_POS_Y;
-    rect.w = JUICYGUI_LOWLVL_EMPTY_WIDTH;
-    rect.h = JUICYGUI_LOWLVL_EMPTY_HEIGHT;*/
+    event = JUICYGUI_EVENT_NONE;
+    JDM_SetRectPos(&rect, JUICYGUI_LOWLVL_EMPTY_POS_X, JUICYGUI_LOWLVL_EMPTY_POS_Y);
+    JDM_SetRectSize(&rect, JUICYGUI_LOWLVL_EMPTY_WIDTH, JUICYGUI_LOWLVL_EMPTY_HEIGHT);
     registered = (host != NULL) ? host->registerElement(this) : false;
     if (registered) {engine = host->GetEngine();}
 }
@@ -60,29 +63,20 @@ bool JuicyGUI_Element::setRect(const JD_Rect* iRect) {
     return sizeChange;
 }
 
-JD_INDEX JuicyGUI_Element::getActionIndex() {
-    return getActionIndex(action);
-}
-JD_INDEX JuicyGUI_Element::getActionIndex(JD_FLAG iAction) {
-    for (JD_INDEX index = (JUICYGUI_NUM_ACTION - 1); index > 0; index--) {
-        if (iAction & (1 << (index - 1))) return index;
-    }
-    return 0;
-}
-void JuicyGUI_Element::updateStatic() {
-    if (flag & JUICYGUI_ELEMENTFLAG_STATIC) {
-        if (textureEngine != NULL) {
-            textureEngine->Clear();
-            textureEngine->AddInstruction(getActionIndex(), &rect);
-            textureEngine->RepeatDraw(true);
+void JuicyGUI_Element::UpdateSprites() {
+    if (engine != NULL && sprites != NULL) {
+        if (flag & JUICYGUI_ELEMENTFLAG_STATIC) {
+            sprites->Clear();
+            sprites->AddInstruction(JPM_GetEventIndex(event), &rect);
+            sprites->RepeatDraw(true);
         }
     }
 }
 
 void JuicyGUI_Element::draw() {
-	if (textureEngine != NULL) {
+	if (engine != NULL && sprites != NULL) {
 		if (getFlag() & JUICYGUI_ELEMENTFLAG_SHOW) {
-            textureEngine->Draw();
+            sprites->Draw();
 		}
 	}
 }

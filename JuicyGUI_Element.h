@@ -4,14 +4,15 @@
 #include "JuicyGUI_Definitions.h"
 
 class JSPR;
+class JPM;
 class JuicyGUI;
 
 class JuicyGUI_Element {
     public:
         JuicyGUI_Element();
-        JuicyGUI_Element(JuicyGUI* iHostUI, void* iOwner, JD_INDEX iID, JD_INDEX iType, const JD_Rect* iDimensions);
+        JuicyGUI_Element(JuicyGUI* iHostUI, void* iOwner, JPM* iProperties, JSPR* iSprites, JD_INDEX iID, JD_INDEX iType, const JD_Rect* iDimensions);
         ~JuicyGUI_Element(void);
-        void setCredentials(JuicyGUI* iHostUI, void* iOwner, JD_INDEX iID, JD_INDEX iType);
+        void setCredentials(JuicyGUI* iHostUI, void* iOwner, JPM* iProperties, JSPR* iSprites, JD_INDEX iID, JD_INDEX iType);
         JEN* getEngine() {return engine;};
         JuicyGUI* getHost(void) {return host;};
         void* getOwner(void) {return owner;};
@@ -22,10 +23,10 @@ class JuicyGUI_Element {
         JD_FLAG setFlag(JD_FLAG iFlag) {flag = iFlag; return getFlag();};
         JD_FLAG attachFlag(JD_FLAG iFlag) {flag |= iFlag; return getFlag();};
         JD_FLAG detachFlag(JD_FLAG iFlag) {flag &= ~iFlag; return getFlag();};
-        JD_FLAG getAction(void) {return action;};
-        JD_FLAG setAction(JD_FLAG iAction) {action = iAction; return getAction();};
-        JD_FLAG attachAction(JD_FLAG iAction) {action |= iAction; return getAction();};
-        JD_FLAG detachAction(JD_FLAG iAction) {action &= ~iAction; return getAction();};
+        JD_FLAG getEvent(void) {return event;};
+        JD_FLAG setEvent(JD_FLAG iEvent) {event = iEvent; return getEvent();};
+        JD_FLAG attachEvent(JD_FLAG iEvent) {event |= iEvent; return getEvent();};
+        JD_FLAG detachEvent(JD_FLAG iEvent) {event &= ~iEvent; return getEvent();};
         void show() {attachFlag(JUICYGUI_ELEMENTFLAG_SHOW);};
         void hide() {detachFlag(JUICYGUI_ELEMENTFLAG_SHOW);};
         void show(bool iShow) {if(iShow) {attachFlag(JUICYGUI_ELEMENTFLAG_SHOW);} else {detachFlag(JUICYGUI_ELEMENTFLAG_SHOW);}};
@@ -46,23 +47,21 @@ class JuicyGUI_Element {
         void setHeight(JD_I iHeight) {rect.h = iHeight;};
         JD_I getWidth(void) {return rect.w;};
         JD_I getHeight(void) {return rect.h;};
-
-		void SetTextureEngine(JSPR* iEngine) {textureEngine = iEngine; updateStatic();};
+        JPM* properties;
+        JSPR* GetSprites() {return sprites;};
 		void draw();
-        JD_INDEX getActionIndex();
-        JD_INDEX getActionIndex(JD_FLAG iActionID);
-        void updateStatic();
+        void UpdateSprites();
     private:
         bool root;
         bool registered;
         JuicyGUI* host;
         JEN* engine;
-		JSPR* textureEngine;
+		JSPR* sprites;
         void* owner;
         JD_INDEX id;
         JD_INDEX type;
         JD_FLAG flag;
-        JD_FLAG action;
+        JD_FLAG event;
         JD_Rect rect;
 };
 
