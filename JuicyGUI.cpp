@@ -125,9 +125,8 @@ bool JuicyGUI::evaluateElement(JuicyGUI_Element* iElement) {
     if (iElement->getEvent() != currentEvent) {
         iElement->setEvent(currentEvent);
         iElement->UpdateSprites();
-        return true;
     }
-    return false;
+    return (iElement->getEvent() != JUICYGUI_EVENT_NONE);
 }
 
 JD_FLAG JuicyGUI::GetMousePos(JD_Point* oPosition) {
@@ -169,24 +168,27 @@ bool JuicyGUI::mouseOver(const JD_Rect* iRect) {
     return false;
 }
 
-
+JD_COLOR JuicyGUI::GetJuicyColor(void) {
+    JD_COLOR juicy = 0;
+    for (JD_INDEX i = 0; i < 3; i++) {
+        JD_COLOR cache = rand() % 0x100;
+        cache = (cache < JUICYGUI_COLOR_MOD_MIN) ? (JUICYGUI_COLOR_MOD_MAX - (JUICYGUI_COLOR_MOD_MIN - cache)) : (cache > JUICYGUI_COLOR_MOD_MAX) ? (JUICYGUI_COLOR_MOD_MIN + (cache - JUICYGUI_COLOR_MOD_MAX)) : cache;
+        juicy |= (cache & 0xff);
+        juicy <<= 8;
+    }
+    juicy |= 0xff;
+    return juicy;
+}
 
 JD_COLOR JuicyGUI::GetJuicy(void) {
     JD_TIME tmil_now = engine->GetTicks();
     static JD_TIME tmil_last = tmil_now;
     JD_COLOR currentColor = 0;
-    static JD_COLOR lastColor = ((rand() % 0x100) << 24) | ((rand() % 0x100) << 16) | ((rand() % 0x100) << 8) | 0xff;
-    static JD_COLOR targetColor = ((rand() % 0x100) << 24) | ((rand() % 0x100) << 16) | ((rand() % 0x100) << 8) | 0xff;
+    static JD_COLOR lastColor = GetJuicyColor();
+    static JD_COLOR targetColor = GetJuicyColor();
     while ((tmil_now - tmil_last) >= JUICYGUI_COLOR_MOD_PERIOD) {
         lastColor = targetColor;
-        targetColor = 0;
-        for (JD_INDEX i = 0; i < 3; i++) {
-            JD_COLOR cache = rand() % 0x100;
-            cache = (cache < JUICYGUI_COLOR_MOD_MIN) ? JUICYGUI_COLOR_MOD_MIN : (cache > JUICYGUI_COLOR_MOD_MAX) ? JUICYGUI_COLOR_MOD_MAX : cache;
-            targetColor |= (cache & 0xff);
-            targetColor <<= 8;
-        }
-        targetColor |= 0xff;
+        targetColor = GetJuicyColor();
         tmil_last += JUICYGUI_COLOR_MOD_PERIOD;
     }
     for (JD_INDEX i = 0; i < 3; i++) {

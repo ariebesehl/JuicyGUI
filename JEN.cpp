@@ -85,7 +85,7 @@ JuicySprite* JEN::CreateSprite(const JD_Point* iSize, JD_COLOR* iPixeldata) {
     if (iSize != NULL && iPixeldata != NULL) {
         newSprite = new JuicySprite;
         newSprite->dimensions = *iSize;
-        newSprite->flag = JUICYSPRITE_TYPE_RAW;
+        newSprite->type = JUICYSPRITE_TYPE_RAW;
         newSprite->sprite = NULL;
         newSprite->pixels = JDM_CopyPixelData(iPixeldata, iSize);
     }
@@ -95,7 +95,7 @@ JuicySprite* JEN::CreateSpriteText(const char* iText, const char* iFontpath, JD_
     JuicySprite* newSprite = NULL;
     if (iText != NULL && iFontpath != NULL) {
         newSprite = new JuicySprite;
-        newSprite->flag = JUICYSPRITE_TYPE_RAW;
+        newSprite->type = JUICYSPRITE_TYPE_RAW;
         newSprite->sprite = NULL;
         newSprite->pixels = getPixelsFromText(iText, &(newSprite->dimensions), iFontpath, iFontsize, iFontcolor, iFontstyle);
         if(newSprite->pixels == NULL) {
@@ -116,43 +116,80 @@ JuicySprite* JEN::CreateSpriteFill(const JD_Point* iSize, JD_COLOR iColor) {
     }
     return newSprite;
 }
-void JEN::RasterizeSprite(JuicySprite* iSprite) {
+void JEN::InflateSprite(JuicySprite* iSprite, JD_I iNum) {
+    if (iSprite != NULL && iNum > 0) {
+        if (iSprite->pixels != NULL) {
+            JD_Point inflatedSize = iSprite->dimensions << iNum;
+            JD_COLOR* inflatedPixels = new JD_COLOR[JDM_GetArea(&inflatedSize)];
+            for (JD_I y = 0; y < inflatedSize.y; y++) {
+                for (JD_I x = 0; x < inflatedSize.x; x++) {
+                    inflatedPixels[x + y * inflatedSize.x] = iSprite->pixels[(x >> iNum) + (y >> iNum) * iSprite->dimensions.x];
+                }
+            }
+            iSprite->dimensions = inflatedSize;
+            delete[] iSprite->pixels;
+            iSprite->pixels = inflatedPixels;
+            resetSprite(iSprite);
+        }
+    }
+}
+void JEN::OptimizeSprite(JuicySprite* iSprite) {
     if (iSprite != NULL) {
         clearSprite(iSprite);
-        switch (mode & JUICYENGINE_MODE_MASK) {
-            case JUICYENGINE_MODE_SDL_TEXTURE: {
-                    SDL_Surface* newSurface = NULL;
-                    newSurface = createSDL_Surface(&(iSprite->dimensions), iSprite->pixels, 0x1);
-                    if (newSurface != NULL) {
-                        iSprite->flag = JUICYSPRITE_TYPE_SDL_TEXTURE;
-                        iSprite->sprite = (void*)createSDL_Texture(newSurface);
-                        freeSDL_Surface(newSurface, 0x0);
+        if (iSprite->pixels != NULL) {
+            switch (mode & JUICYENGINE_MODE_MASK) {
+                case JUICYENGINE_MODE_SDL_TEXTURE: {
+                        SDL_Surface* newSurface = NULL;
+                        newSurface = createSDL_Surface(&(iSprite->dimensions), iSprite->pixels, 0x1);
+                        if (newSurface != NULL) {
+                            iSprite->type = JUICYSPRITE_TYPE_SDL_TEXTURE;
+                            iSprite->flag |= JUICYSPRITE_FLAG_OPTIMIZED;
+                            iSprite->sprite = (void*)createSDL_Texture(newSurface);
+                            freeSDL_Surface(newSurface, 0x0);
+                        }
                     }
-                }
-                break;
-            case JUICYENGINE_MODE_SDL_SURFACE: {
-                    SDL_Surface* newSurface = NULL;
-                    newSurface = createSDL_Surface(&iSprite->dimensions, iSprite->pixels, 0x1);
-                    if (newSurface != NULL) {
-                        iSprite->flag = JUICYSPRITE_TYPE_SDL_SURFACE;
-                        iSprite->sprite = (void*)newSurface;
+                    break;
+                case JUICYENGINE_MODE_SDL_SURFACE: {
+                        SDL_Surface* newSurface = NULL;
+                        newSurface = createSDL_Surface(&iSprite->dimensions, iSprite->pixels, 0x1);
+                        if (newSurface != NULL) {
+                            iSprite->type = JUICYSPRITE_TYPE_SDL_SURFACE;
+                            iSprite->flag |= JUICYSPRITE_FLAG_OPTIMIZED;
+                            iSprite->sprite = (void*)newSurface;
+                        }
                     }
-                }
-                break;
-            default:
-                break;
+                    break;
+                default:
+                    break;
+            }
         }
+    }
+}
+void JEN::checkSprite(JuicySprite* iSprite) {
+    if (iSprite != NULL) {
+        if ((iSprite->type) != (mode & JUICYENGINE_MODE_MASK) || !(iSprite->flag & JUICYSPRITE_FLAG_OPTIMIZED)) {
+            OptimizeSprite(iSprite);
+        }
+    }
+}
+void JEN::resetSprite(JuicySprite* iSprite) {
+    if (iSprite != NULL) {
+        iSprite->flag &= ~JUICYSPRITE_FLAG_OPTIMIZED;
     }
 }
 void JEN::clearSprite(JuicySprite* iSprite) {
     if (iSprite != NULL) {
         if (iSprite->sprite != NULL) {
-            switch ((iSprite->flag) & JUICYSPRITE_TYPE_MASK) {
+            switch ((iSprite->type)) {
                 case JUICYSPRITE_TYPE_SDL_TEXTURE:
                     freeSDL_Texture((SDL_Texture*)iSprite->sprite);
+                    iSprite->type = JUICYSPRITE_TYPE_RAW;
+                    iSprite->flag &= ~JUICYSPRITE_FLAG_OPTIMIZED;
                     break;
                 case JUICYSPRITE_TYPE_SDL_SURFACE:
                     freeSDL_Surface((SDL_Surface*)iSprite->sprite, 0x0);
+                    iSprite->type = JUICYSPRITE_TYPE_RAW;
+                    iSprite->flag &= ~JUICYSPRITE_FLAG_OPTIMIZED;
                     break;
                 default:
                     break;
@@ -301,9 +338,7 @@ void JEN::Render(JuicySprite* iSprite, const JD_Point* iPos) {
 }
 void JEN::Render(JuicySprite* iSprite, const JD_Rect* iRect) {
     if (iSprite != NULL) {
-        if ((iSprite->flag & JUICYSPRITE_TYPE_MASK) != (mode & JUICYENGINE_MODE_MASK) || iSprite->sprite == NULL) {
-            RasterizeSprite(iSprite);
-        }
+        checkSprite(iSprite);
         if (mode & JUICYENGINE_MODE_BUFFERED) {
             if (screenCanvas == NULL) {
                 createBuffer();
@@ -347,6 +382,29 @@ void JEN::Present() {
                 break;
         }
         clearBuffer();
+    }
+}
+void JEN::PresentSprite(JuicySprite* iSprite, const JD_Point* iPos) {
+    if (iSprite != NULL) {
+        JD_Rect drawRect;
+        JDM_SetRectPos(&drawRect, iPos);
+        JDM_SetRectSize(&drawRect, &(iSprite->dimensions));
+        PresentSprite(iSprite, &drawRect);
+    }
+}
+void JEN::PresentSprite(JuicySprite* iSprite, const JD_Rect* iRect) {
+    if (iSprite != NULL) {
+        checkSprite(iSprite);
+        switch (mode & JUICYENGINE_MODE_MASK) {
+            case JUICYENGINE_MODE_SDL_TEXTURE:
+                renderSDL_Texture((SDL_Texture*)iSprite->sprite, iRect);
+                break;
+            case JUICYENGINE_MODE_SDL_SURFACE:
+                renderAndDestroySDL_Texture(createSDL_Texture((SDL_Surface*)(iSprite->sprite)), iRect);
+                break;
+            default:
+                break;
+        }
     }
 }
 void JEN::freeSDL_Surface(SDL_Surface* iSurface) {
@@ -421,74 +479,79 @@ void JEN::BlendSprites(const JuicySprite* iSrc, JuicySprite* oDst) {
 }
 void JEN::BlendSprites(const JuicySprite* iSrc, JuicySprite* oDst, const JD_Rect* iRectSrc, const JD_Rect* iRectDst) {
     if (iSrc != NULL && oDst != NULL) {
-        if (iSrc->flag == JUICYSPRITE_TYPE_RAW && oDst->flag == JUICYSPRITE_TYPE_RAW) {
+        if (iSrc->pixels != NULL && oDst->pixels != NULL) {
             JD_Point indexShiftSrc;
             JD_Rect rectTarget;
-            JDM_EmptyPoint(&indexShiftSrc);
-            JDM_EmptyRect(&rectTarget);
+            JD_Rect rectSrc;
+            JD_Rect rectDst;
             switch ((iRectDst != NULL) | ((iRectSrc != NULL) << 1)) {
                 default:
                 case 0:
                     rectTarget.w = (iSrc->dimensions.x < oDst->dimensions.x) ? iSrc->dimensions.x : oDst->dimensions.x;
                     rectTarget.h = (iSrc->dimensions.y < oDst->dimensions.y) ? iSrc->dimensions.y : oDst->dimensions.y;
-                    rectTarget.x = (oDst->dimensions.x - rectTarget.w) / 2;
-                    rectTarget.y = (oDst->dimensions.y - rectTarget.h) / 2;
-                    indexShiftSrc.x = rectTarget.x - (iSrc->dimensions.x - rectTarget.w) / 2;
-                    indexShiftSrc.y = rectTarget.y - (iSrc->dimensions.y - rectTarget.h) / 2;
+                    rectTarget.x = (oDst->dimensions.x - rectTarget.w) >> 1;
+                    rectTarget.y = (oDst->dimensions.y - rectTarget.h) >> 1;
+                    indexShiftSrc.x = rectTarget.x - ((iSrc->dimensions.x - rectTarget.w) >> 1);
+                    indexShiftSrc.y = rectTarget.y - ((iSrc->dimensions.y - rectTarget.h) >> 1);
                     break;
                 case 1:
-                    rectTarget.x = (iRectDst->x <= oDst->dimensions.x) ? iRectDst->x : oDst->dimensions.x;
-                    rectTarget.y = (iRectDst->y <= oDst->dimensions.y) ? iRectDst->y : oDst->dimensions.y;
-                    rectTarget.w = (iRectDst->w < iSrc->dimensions.x) ? iRectDst->w : iSrc->dimensions.x;
-                    rectTarget.h = (iRectDst->h < iSrc->dimensions.y) ? iRectDst->h : iSrc->dimensions.y;
-                    rectTarget.w = ((rectTarget.x + rectTarget.w) < oDst->dimensions.x) ? rectTarget.w : (oDst->dimensions.x - rectTarget.x);
-                    rectTarget.h = ((rectTarget.y + rectTarget.h) < oDst->dimensions.y) ? rectTarget.h : (oDst->dimensions.y - rectTarget.y);
-                    indexShiftSrc.x = rectTarget.x - (iSrc->dimensions.x - rectTarget.w) / 2;
-                    indexShiftSrc.y = rectTarget.y - (iSrc->dimensions.y - rectTarget.h) / 2;
+                    rectDst = *iRectDst;
+                    JDM_ClipRect(&rectDst, &(oDst->dimensions));
+                    rectTarget.x = rectDst.x;
+                    rectTarget.y = rectDst.y;
+                    rectTarget.w = (rectDst.w < iSrc->dimensions.x) ? rectDst.w : iSrc->dimensions.x;
+                    rectTarget.h = (rectDst.h < iSrc->dimensions.y) ? rectDst.h : iSrc->dimensions.y;
+                    indexShiftSrc.x = rectTarget.x - ((iSrc->dimensions.x - rectTarget.w) >> 1);
+                    indexShiftSrc.y = rectTarget.y - ((iSrc->dimensions.y - rectTarget.h) >> 1);
                     break;
                 case 2:
-                    rectTarget.w = ((iRectSrc->x + iRectSrc->w) < iSrc->dimensions.x) ? iRectSrc->w : iSrc->dimensions.x - iRectSrc->x;
-                    rectTarget.h = ((iRectSrc->y + iRectSrc->h) < iSrc->dimensions.y) ? iRectSrc->h : iSrc->dimensions.y - iRectSrc->y;
-                    rectTarget.w = (rectTarget.w < oDst->dimensions.x) ? rectTarget.w : oDst->dimensions.x;
-                    rectTarget.h = (rectTarget.h < oDst->dimensions.y) ? rectTarget.h : oDst->dimensions.y;
-                    rectTarget.x = (oDst->dimensions.x - rectTarget.w) / 2;
-                    rectTarget.y = (oDst->dimensions.y - rectTarget.h) / 2;
-                    indexShiftSrc.x = rectTarget.x - ((iRectSrc->x < iSrc->dimensions.x) ? iRectSrc->x : iSrc->dimensions.x);
-                    indexShiftSrc.y = rectTarget.y - ((iRectSrc->y < iSrc->dimensions.y) ? iRectSrc->y : iSrc->dimensions.y);
+                    rectSrc = *iRectSrc;
+                    JDM_ClipRect(&rectSrc, &(iSrc->dimensions));
+                    rectTarget.w = (rectSrc.w < oDst->dimensions.x) ? rectSrc.w : oDst->dimensions.x;
+                    rectTarget.h = (rectSrc.h < oDst->dimensions.y) ? rectSrc.h : oDst->dimensions.y;
+                    rectTarget.x = ((oDst->dimensions.x - rectTarget.w) >> 1);
+                    rectTarget.y = ((oDst->dimensions.y - rectTarget.h) >> 1);
+                    indexShiftSrc.x = rectTarget.x - rectSrc.x;
+                    indexShiftSrc.y = rectTarget.y - rectSrc.y;
                     break;
                 case 3:
-                    rectTarget.x = (iRectDst->x <= oDst->dimensions.x) ? iRectDst->x : oDst->dimensions.x;
-                    rectTarget.y = (iRectDst->y <= oDst->dimensions.y) ? iRectDst->y : oDst->dimensions.y;
-                    rectTarget.w = (iRectDst->w < iRectSrc->w) ? iRectDst->w : iRectSrc->w;
-                    rectTarget.h = (iRectDst->h < iRectSrc->h) ? iRectDst->h : iRectSrc->h;
-                    rectTarget.w = ((rectTarget.x + rectTarget.w) < oDst->dimensions.x) ? rectTarget.w : (oDst->dimensions.x - rectTarget.x);
-                    rectTarget.h = ((rectTarget.y + rectTarget.h) < oDst->dimensions.y) ? rectTarget.h : (oDst->dimensions.y - rectTarget.y);
-                    rectTarget.w = (rectTarget.w < iRectSrc->x + iRectSrc->w) ? rectTarget.w : iSrc->dimensions.x - iRectSrc->x;
-                    rectTarget.h = (rectTarget.h < iRectSrc->y + iRectSrc->h) ? rectTarget.h : iSrc->dimensions.y - iRectSrc->y;
-                    indexShiftSrc.x = rectTarget.x - ((iRectSrc->x < iSrc->dimensions.x) ? iRectSrc->x : iSrc->dimensions.x);
-                    indexShiftSrc.y = rectTarget.y - ((iRectSrc->y < iSrc->dimensions.y) ? iRectSrc->y : iSrc->dimensions.y);
+                    rectSrc = *iRectSrc;
+                    JDM_ClipRect(&rectSrc, &(iSrc->dimensions));
+                    rectDst = *iRectDst;
+                    JDM_ClipRect(&rectDst, &(oDst->dimensions));
+                    rectTarget.x = rectDst.x;
+                    rectTarget.y = rectDst.y;
+                    rectTarget.w = (rectDst.w < rectSrc.w) ? rectDst.w : rectSrc.w;
+                    rectTarget.h = (rectDst.h < rectSrc.h) ? rectDst.h : rectSrc.h;
+                    indexShiftSrc.x = rectTarget.x - rectSrc.x;
+                    indexShiftSrc.y = rectTarget.y - rectSrc.y;
                     break;
             }
-            JD_COLOR* pixelSrc = ((JD_COLOR*)(iSrc->pixels));
-            JD_COLOR* pixelDst = ((JD_COLOR*)(oDst->pixels));
+            JD_COLOR colorSrc = 0;
+            JD_COLOR colorDst = 0;
+            JD_I indexOffsetDst = 0;
             for (JD_I y = rectTarget.y; y < rectTarget.y + rectTarget.h; y++) {
                 for (JD_I x = rectTarget.x; x < rectTarget.x + rectTarget.w; x++) {
-                    JD_COLOR colorSrc = pixelSrc[(x - indexShiftSrc.x) + ((y - indexShiftSrc.y) * iSrc->dimensions.x)];
-                    JD_COLOR colorDst = pixelDst[x + y * oDst->dimensions.x];
-                    pixelDst[x + y * oDst->dimensions.x] = blendPixel(colorSrc, colorDst);
+                    indexOffsetDst = x + y * oDst->dimensions.x;
+                    colorSrc = iSrc->pixels[(x - indexShiftSrc.x) + ((y - indexShiftSrc.y) * iSrc->dimensions.x)];
+                    colorDst = oDst->pixels[indexOffsetDst];
+                    oDst->pixels[indexOffsetDst] = blendPixel(colorSrc, colorDst);
                 }
             }
+            resetSprite(oDst);
         }
     }
 }
 
 JD_COLOR JEN::blendPixel(JD_COLOR iBlend, JD_COLOR iBase) {
     JD_COLOR result = 0;
+    JD_COLOR blendCh = 0;
+    JD_COLOR baseCh = 0;
     JD_COLOR blendA = iBlend & 0xff;
     JD_COLOR baseA = iBase & 0xff;
     for (JD_INDEX i = 0; i < 3; i++) {
-        JD_COLOR blendCh = (iBlend >> (24 - 8 * i)) & 0xff;
-        JD_COLOR baseCh = (iBase >> (24 - 8 * i)) & 0xff;
+        blendCh = (iBlend >> (24 - 8 * i)) & 0xff;
+        baseCh = (iBase >> (24 - 8 * i)) & 0xff;
         result |= ((blendCh * blendA + baseCh * (0xff - blendA)) / 0xff) & 0xff;
         result <<= 8;
     }

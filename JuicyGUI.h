@@ -34,6 +34,7 @@ class JuicyGUI {
         JD_I GetScreenSizeSmaller(void);
 
         JD_COLOR GetJuicy(void);
+        JD_COLOR GetJuicyColor(void);
 
         void DrawBackground(JD_COLOR iColor) {engine->FillScreen(iColor);};
         void DrawElements(void);

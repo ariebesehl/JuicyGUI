@@ -33,12 +33,13 @@
 #define JUICYENGINE_MODE_BUFFERED 0x100
 #define JUICYENGINE_MODE_INIT JUICYENGINE_MODE_SDL_TEXTURE
 
-#define JUICYSPRITE_TYPE_MASK JUICYENGINE_MODE_MASK
 #define JUICYSPRITE_TYPE_RAW 0x0
 #define JUICYSPRITE_TYPE_SDL_TEXTURE JUICYENGINE_MODE_SDL_TEXTURE
 #define JUICYSPRITE_TYPE_SDL_SURFACE JUICYENGINE_MODE_SDL_SURFACE
+#define JUICYSPRITE_FLAG_OPTIMIZED 0x1
 
 typedef struct {
+	JD_FLAG type;
 	JD_FLAG flag;
 	JD_Point dimensions;
 	JD_COLOR* pixels;
@@ -73,13 +74,16 @@ class JEN {
 		JuicySprite* CreateSpriteFill(const JD_Point* iSize, JD_COLOR iColor);
 		JuicySprite* CreateSpriteImage(const char* iFilepath);
 		JuicySprite* CreateSpriteText(const char* iText, const char* iFontpath, JD_I iFontsize, JD_COLOR iFontcolor, JD_FLAG iFontstyle);
-		void RasterizeSprite(JuicySprite* iSprite);
+		void InflateSprite(JuicySprite* iSprite, JD_I iNum);
+		void OptimizeSprite(JuicySprite* iSprite);
 		void BlendSprites(const JuicySprite* iSrc, JuicySprite* oDst);
 		void BlendSprites(const JuicySprite* iSrc, JuicySprite* oDst, const JD_Rect* iRectSrc, const JD_Rect* iRectDst);
 
 		void Render(JuicySprite* iSprite, const JD_Point* iPos);
 		void Render(JuicySprite* iSprite, const JD_Rect* iRect);
 		void Present();
+		void PresentSprite(JuicySprite* iSprite, const JD_Point* iPos);
+		void PresentSprite(JuicySprite* iSprite, const JD_Rect* iRect);
 
 		void FreeSprite(JuicySprite* iSprite);
 	private:
@@ -113,6 +117,8 @@ class JEN {
 		JD_COLOR* getPixelsFromImage(const char* iFilepath, JD_Point* oSize);
 		JD_COLOR* getPixelsFromText(const char* iText, JD_Point* oSize, const char* iFontpath, JD_I iFontsize, JD_COLOR iFontcolor, JD_FLAG iFontstyle);
 		JD_COLOR blendPixel(JD_COLOR iPixel1, JD_COLOR iPixel2);
+		void checkSprite(JuicySprite* iSprite);
+		void resetSprite(JuicySprite* iSprite);
 		void clearSprite(JuicySprite* iSprite);
 	    void* loadSDL_Image(const char* iFilepath, JD_Point* oSize);
 

@@ -137,6 +137,7 @@ JD_I JDM_GetArea(const JD_Rect* iRect);
 void JDM_EmptyRect(JD_Rect* oRect);
 void JDM_EmptyRectPos(JD_Rect* oRect);
 void JDM_EmptyRectSize(JD_Rect* oRect);
+void JDM_ClipRect(JD_Rect* ioRect, const JD_Point* iSize);
 void JDM_SetRect(JD_Rect* oRect, const JD_I iX, const JD_I iY, const JD_I iW, const JD_I iH);
 void JDM_SetRectPos(JD_Rect* oRect, const JD_Point* iPos);
 void JDM_SetRectPos(JD_Rect* oRect, const JD_I iX, const JD_I iY);

@@ -261,6 +261,30 @@ void JDM_EmptyRectSize(JD_Rect* oRect) {
     oRect->w = 0;
     oRect->h = 0;
 }
+void JDM_ClipRect(JD_Rect* ioRect, const JD_Point* iSize) {
+    if (ioRect->x < 0) {
+        ioRect->w += ioRect->x;
+        ioRect->x = 0;
+    } else {
+        if (ioRect->x > iSize->x) {
+            ioRect->x = iSize->x;
+        }
+    }
+    if (ioRect->y < 0) {
+        ioRect->y += ioRect->y;
+        ioRect->y = 0;
+    } else {
+        if (ioRect->y > iSize->y) {
+            ioRect->y = iSize->y;
+        }
+    }
+    if (iSize->x - ioRect->x < ioRect->w) {
+        ioRect->w = iSize->x - ioRect->x;
+    }
+    if (iSize->y - ioRect->y < ioRect->h) {
+        ioRect->h = iSize->y - ioRect->y;
+    }
+}
 void JDM_SetRect(JD_Rect* oRect, const int iX, const int iY, const int iW, const int iH) {
     oRect->x = iX;
     oRect->y = iY;
