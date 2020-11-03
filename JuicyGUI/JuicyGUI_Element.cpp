@@ -57,9 +57,10 @@ void JuicyGUI_Element::setCredentials(JuicyGUI* iHostUI, void* iOwner, JPM* iPro
 bool JuicyGUI_Element::setRect(const JD_Rect* iRect) {
     bool sizeChange = false;
     if (iRect != NULL) {
-        sizeChange = (rect.w != iRect->w || rect.h != iRect->h);
+        sizeChange = (iRect->w != rect.w) || (iRect->h != rect.h);
         rect = *iRect;
     }
+    UpdateSprites();
     return sizeChange;
 }
 

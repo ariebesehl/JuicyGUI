@@ -58,6 +58,41 @@ JuicyGUI_Charset::~JuicyGUI_Charset() {
 	}
 }
 
+void JuicyGUI_Charset::CenterTXT(const char* iText, const JD_Point* iPosition) {
+    JD_Point targetPos;
+    if (iPosition != NULL) {targetPos = *iPosition;} else {element.getPos(&targetPos);}
+    JD_Point textOffset;
+    sizer(iText, &textOffset);
+    textOffset /= 2;
+    textOffset *= -1;
+    textOffset += targetPos;
+    SetCursor(&textOffset);
+    printer(iText);
+}
+void JuicyGUI_Charset::CenterlnTXT(const char* iText, const JD_Point* iPosition) {
+    JD_Point targetPos;
+    if (iPosition != NULL) {targetPos = *iPosition;} else {element.getPos(&targetPos);}
+    JD_Point textOffset;
+    sizer(iText, &textOffset);
+    textOffset /= 2;
+    textOffset *= -1;
+    textOffset += targetPos;
+    SetCursor(&textOffset);
+    printer(iText);
+    SetCursor(&targetPos);
+    carrierReturn();
+}
+void JuicyGUI_Charset::CenterINT(JD_I iInteger, const JD_Point* iPosition) {
+    JD_Point targetPos;
+    if (iPosition != NULL) {targetPos = *iPosition;} else {element.getPos(&targetPos);}
+    JD_Point textOffset;
+    sizerINT(iInteger, &textOffset);
+    textOffset /= 2;
+    textOffset *= -1;
+    textOffset += targetPos;
+    SetCursor(&textOffset);
+    printerINT(iInteger);
+}
 void JuicyGUI_Charset::PrintTXT(const char* text, JD_Point* iPosition) {
     SetCursor(iPosition);
     printer(text);
@@ -193,17 +228,17 @@ void JuicyGUI_Charset::printerChar(JD_INDEX iCharNum, JD_INDEX options) {
 
 void JuicyGUI_Charset::sizer(const char* text, JD_Point* target) {
     if (text != NULL) {
-        target->x = 0;
-        target->y = 0;
+        JDM_EmptyPoint(target);
         JD_INDEX i = 0;
+        JD_INDEX charIndex = 0;
         while (true) {
             if (text[i] != '\0' && i < JUICYGUI_CHARSET_MAX_LENGTH) {
-                JD_INDEX numChar = text[i] & JUICYGUI_CHARSET_MASK;
+                charIndex = text[i] & JUICYGUI_CHARSET_MASK;
                 switch (text[i]) {
                     default:
-                        if (charSizes[numChar + styleOffset]->x) {
-                            target->x += charSizes[numChar + styleOffset]->x;
-                            if (charSizes[numChar + styleOffset]->y > target->y) target->y = charSizes[numChar + styleOffset]->y;
+                        if (charSizes[charIndex + styleOffset]->x) {
+                            target->x += charSizes[charIndex + styleOffset]->x;
+                            if (charSizes[charIndex + styleOffset]->y > target->y) target->y = charSizes[charIndex + styleOffset]->y;
                         }
                         break;
                 }
@@ -216,8 +251,7 @@ void JuicyGUI_Charset::sizer(const char* text, JD_Point* target) {
 }
 
 void JuicyGUI_Charset::sizerINT(JD_I integer, JD_Point* target) {
-    target->x = 0;
-    target->y = 0;
+    JDM_EmptyPoint(target);
     if (integer < 0) {
         target->x += charSizes[JUICYGUI_CHARSET_CHARNUM_HYPHEN + styleOffset]->x;
         target->y = charSizes[JUICYGUI_CHARSET_CHARNUM_HYPHEN + styleOffset]->y;
@@ -298,17 +332,16 @@ bool JuicyGUI_Charset::createTextures() {
             for (JD_INDEX style = 0; style < JUICYGUI_CHARSET_NUM_STYLES; style++) {
                 JD_FLAG fontStyle = style ? (JUICYGUI_CHARSET_STYLE_BOLD << (style - 1)) : JUICYGUI_CHARSET_STYLE_NORMAL;
                 char charEnum[] = {0, '\0'};
-                char* ptrChar = &charEnum[0];
                 for (JD_INDEX i = 0; i < JUICYGUI_CHARSET_SIZE; i++) {
                     JD_INDEX currentIndex = i + (style * JUICYGUI_CHARSET_SIZE);
-                    element.GetSprites()->AddSpecificSprite(currentIndex, element.getEngine()->CreateSpriteText(ptrChar, defaultProperties->fontPath, defaultProperties->fontSize, defaultProperties->color, fontStyle));
+                    element.GetSprites()->AddSpecificSprite(currentIndex, element.getEngine()->CreateSpriteText(charEnum, defaultProperties->fontPath, defaultProperties->fontSize, defaultProperties->color, fontStyle));
                     if (charSizes[currentIndex] == NULL) {charSizes[currentIndex] = new JD_Point;}
                     if (element.GetSprites()->GetSprite(currentIndex) != NULL) {
                         *charSizes[currentIndex] = element.GetSprites()->GetSprite(currentIndex)->dimensions;
                     } else {
                         JDM_EmptyPoint(charSizes[currentIndex]);
                     }
-                    (*ptrChar)++;
+                    (charEnum[0])++;
                 }
             }
             defaultProperties->lineMargin = charSizes[JUICYGUI_CHARSET_REFERENCE_HEIGHT]->y * JUICYGUI_CHARSET_LINE_MARGIN_PERCENT / 100;

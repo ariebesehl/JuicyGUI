@@ -2,6 +2,15 @@
 #include "JuicyGUI_Definitions.h"
 #include "JuicyGUI_Box.h"
 
+JuicyGUI_Box_Properties* JPM_CreateDefault_Box() {
+    JuicyGUI_Box_Properties* defaultBox = new JuicyGUI_Box_Properties;
+    defaultBox->color = JUICYDEFAULT_BOX_PROPERTIES_COLOR;
+    defaultBox->frameSize = JUICYDEFAULT_BOX_PROPERTIES_FRAMESIZE;
+    defaultBox->frameColor = JUICYDEFAULT_BOX_PROPERTIES_FRAMECOLOR;
+    return defaultBox;
+}
+
+
 JuicyGUI_Box::JuicyGUI_Box(JuicyGUI* iHostUI, JD_INDEX iID) {
     init(iHostUI, iID, NULL, JUICYDEFAULT_BOX_PROPERTIES_COLOR, JUICYDEFAULT_BOX_PROPERTIES_FRAMECOLOR);
 }
@@ -12,7 +21,7 @@ JuicyGUI_Box::JuicyGUI_Box(JuicyGUI* iHostUI, JD_INDEX iID, JD_Rect* iDimensions
     init(iHostUI, iID, iDimensions, iColor, iFrameColor);
 }
 void JuicyGUI_Box::init(JuicyGUI* iHostUI, JD_INDEX iID, JD_Rect* iDimensions, JD_COLOR iColor, JD_COLOR iFrameColor) {
-    element.setCredentials(iHostUI, this, new JPM((void*)new JuicyGUI_Box_Properties), new JSPR(iHostUI->GetEngine()), iID, JUICYGUI_TYPE_ID_BOX);
+    element.setCredentials(iHostUI, this, new JPM((void*)JPM_CreateDefault_Box()), new JSPR(iHostUI->GetEngine()), iID, JUICYGUI_TYPE_ID_BOX);
     initDefault(iColor, iFrameColor);
     element.setRect(iDimensions);
     createTextures();
@@ -24,7 +33,7 @@ void JuicyGUI_Box::initDefault(JD_COLOR iColor, JD_COLOR iFrameColor) {
         switch (eventType) {
             case JUICYGUI_EVENT_NONE:
                 if (polledProps == NULL) {
-                    polledProps = new JuicyGUI_Box_Properties;
+                    polledProps = JPM_CreateDefault_Box();
                     element.properties->SetProperties(eventType, (void*)polledProps);
                 }
                 polledProps->color = iColor;
@@ -84,10 +93,62 @@ void JuicyGUI_Box::resetTextures() {
     }
     createTextures();
 }
-
+/*
 JD_I JuicyGUI_Box::GetFrameSize() {
     return GetFrameSize(JUICYGUI_EVENT_NONE);
 }
+*/
 JD_I JuicyGUI_Box::GetFrameSize(JD_FLAG iEvent) {
     return ((JuicyGUI_Box_Properties*)(element.properties->GetProperties(iEvent)))->frameSize;
+}
+JD_COLOR JuicyGUI_Box::GetFrameColor(JD_FLAG iEvent) {
+    return ((JuicyGUI_Box_Properties*)(element.properties->GetProperties(iEvent)))->frameColor;
+}
+JD_COLOR JuicyGUI_Box::GetColor(JD_FLAG iEvent) {
+    return ((JuicyGUI_Box_Properties*)(element.properties->GetProperties(iEvent)))->color;
+}
+void JuicyGUI_Box::SetFrameSize(JD_FLAG iEvent, JD_I iSize) {
+    JuicyGUI_Box_Properties* oldProps = (JuicyGUI_Box_Properties*)(element.properties->GetPropertiesAtIndex(JPM_GetEventIndex(iEvent)));
+    if (oldProps == NULL) {
+        oldProps = new JuicyGUI_Box_Properties;
+        *oldProps = *((JuicyGUI_Box_Properties*)(element.properties->GetProperties(JUICYGUI_EVENT_NONE)));
+        element.properties->SetProperties(iEvent, (void*)oldProps);
+    }
+    oldProps->frameSize = iSize;
+    resetTextures();
+}
+void JuicyGUI_Box::SetFrameSize(JD_I iSize) {
+    JuicyGUI_Box_Properties* polledProps = NULL;
+    while (element.properties->PollProperties((void**)&polledProps, NULL)) {if (polledProps != NULL) {polledProps->frameSize = iSize;}}
+    resetTextures();
+}
+void JuicyGUI_Box::SetFrameColor(JD_FLAG iEvent, JD_COLOR iColor) {
+    JuicyGUI_Box_Properties* oldProps = (JuicyGUI_Box_Properties*)(element.properties->GetPropertiesAtIndex(JPM_GetEventIndex(iEvent)));
+    if (oldProps == NULL) {
+        oldProps = new JuicyGUI_Box_Properties;
+        *oldProps = *((JuicyGUI_Box_Properties*)(element.properties->GetProperties(JUICYGUI_EVENT_NONE)));
+        element.properties->SetProperties(iEvent, (void*)oldProps);
+    }
+    oldProps->frameColor = iColor;
+    resetTextures();
+}
+void JuicyGUI_Box::SetFrameColor(JD_COLOR iColor) {
+    JuicyGUI_Box_Properties* polledProps = NULL;
+    while (element.properties->PollProperties((void**)&polledProps, NULL)) {if (polledProps != NULL) {polledProps->frameColor = iColor;}}
+    resetTextures();
+}
+void JuicyGUI_Box::SetColor(JD_FLAG iEvent, JD_COLOR iColor) {
+    JuicyGUI_Box_Properties* oldProps = (JuicyGUI_Box_Properties*)(element.properties->GetPropertiesAtIndex(JPM_GetEventIndex(iEvent)));
+    if (oldProps == NULL) {
+        oldProps = new JuicyGUI_Box_Properties;
+        *oldProps = *((JuicyGUI_Box_Properties*)(element.properties->GetProperties(JUICYGUI_EVENT_NONE)));
+        element.properties->SetProperties(iEvent, (void*)oldProps);
+    }
+    oldProps->color = iColor;
+    resetTextures();
+}
+void JuicyGUI_Box::SetColor(JD_COLOR iColor) {
+    JuicyGUI_Box_Properties* polledProps = NULL;
+    while (element.properties->PollProperties((void**)&polledProps, NULL)) {if (polledProps != NULL) {polledProps->color = iColor;}}
+    resetTextures();
 }

@@ -6,7 +6,7 @@
 #include "JuicyGUI_Charset.h"
 
 
-JuicyGUI::JuicyGUI(SDL_Window* iWindow, SDL_Renderer* iRenderer, SDL_Event* iEvent) {
+JuicyGUI::JuicyGUI(SDL_Window* iWindow, SDL_Renderer* iRenderer) {
     engine = new JEN(iWindow, iRenderer);
     element.setCredentials(this, this, NULL, NULL, JUICYGUI_LOWLVL_ROOT_ID_NUM, JUICYGUI_TYPE_ID_GUI);
     element.setRect(engine->GetWindowRect());
@@ -14,48 +14,38 @@ JuicyGUI::JuicyGUI(SDL_Window* iWindow, SDL_Renderer* iRenderer, SDL_Event* iEve
     numElement = 0;
     ctrEvents = 0;
     numEvents = 0;
+    msFocusElement = JUICYGUI_LOWLVL_EMPTY_ID_NUM;
     events = NULL;
+    eventsFlushed = true;
 }
 
 JuicyGUI::~JuicyGUI() {
     if (events != NULL) {
-        for (JD_INDEX i = 0; i < numEvents; i++) {
-            if (events[i] != NULL) {
-                delete events[i];
-            }
-        }
+        for (JD_INDEX i = 0; i < numEvents; i++) {if (events[i] != NULL) {delete events[i];}}
         JDM_DeleteList((void***)&events, &numEvents);
     }
     if (elements != NULL) {
         for (JD_INDEX i = 0; i < numElement; i++) {
-        if (elements[i] != NULL) {
+            if (elements[i] != NULL) {
                 switch (elements[i]->getType()) {
-                    case JUICYGUI_TYPE_ID_BOX:
-                        delete (JuicyGUI_Box*)(elements[i]->getOwner());
-                        break;
-                    case JUICYGUI_TYPE_ID_CHARSET:
-                        delete (JuicyGUI_Charset*)(elements[i]->getOwner());
-                        break;
-                    case JUICYGUI_TYPE_ID_BUTTON:
-                        delete (JuicyGUI_Button*)(elements[i]->getOwner());
-                        break;
-                    default:
-                        break;
+                    case JUICYGUI_TYPE_ID_BOX: delete (JuicyGUI_Box*)(elements[i]->getOwner()); break;
+                    case JUICYGUI_TYPE_ID_CHARSET: delete (JuicyGUI_Charset*)(elements[i]->getOwner()); break;
+                    case JUICYGUI_TYPE_ID_BUTTON: delete (JuicyGUI_Button*)(elements[i]->getOwner()); break;
+                    default: break;
                 }
             }
         }
         JDM_DeleteList((void***)&elements, &numElement);
     }
-    if (engine != NULL) {
-        delete engine;
-    }
+    if (engine != NULL) {delete engine;}
 }
 
 bool JuicyGUI::registerElement(JuicyGUI_Element* iElement) {
     if (iElement != NULL) {
         if (iElement->getHost() == this && iElement->getOwner() != NULL) {
             if (!(iElement->isRoot())) {
-                JDM_AddToList((void***)&elements, &numElement, (void*)iElement);
+                JDM_AddToList((void***)&elements, numElement, (void*)iElement);
+                numElement++;
                 return true;
             }
         }
@@ -63,7 +53,7 @@ bool JuicyGUI::registerElement(JuicyGUI_Element* iElement) {
     return false;
 }
 
-JD_FLAG JuicyGUI::UpdateState(JuicyGUI_Event*** oEvent, JD_INDEX* numElements) {
+void JuicyGUI::updateEvents() {
     static JD_INDEX numIteration = 0;
 
     element.setEvent(JUICYGUI_EVENT_NONE);
@@ -74,41 +64,46 @@ JD_FLAG JuicyGUI::UpdateState(JuicyGUI_Event*** oEvent, JD_INDEX* numElements) {
         element.attachEvent(JUICYGUI_EVENT_RESIZE);
     }
 
-    updateMouse();
+    if (!updateMouse()) {msFocusElement = JUICYGUI_LOWLVL_EMPTY_ID_NUM;}
 
     ctrEvents = 0;
     for (JD_INDEX i = 0; i < (1 + numElement); i++) {
-        if (i ? evaluateElement(elements[i-1]) : (element.getEvent() != JUICYGUI_EVENT_NONE)) {
+        if (i ? evaluateElement(elements[numElement - i]) : (element.getEvent() != JUICYGUI_EVENT_NONE)) {
             if (ctrEvents >= numEvents) {
-                JDM_AddToList((void***)&events, &numEvents, (void*)new JuicyGUI_Event);
+                JDM_AddToList((void***)&events, numEvents, (void*)new JuicyGUI_Event);
+                numEvents++;
             }
-            events[ctrEvents]->id = i ? (elements[i-1]->getID()) : element.getID();
-            events[ctrEvents]->type = i ? (elements[i-1]->getEvent()) : element.getEvent();
+            events[ctrEvents]->id = i ? (elements[numElement - i]->getID()) : element.getID();
+            events[ctrEvents]->type = i ? (elements[numElement - i]->getEvent()) : element.getEvent();
             ctrEvents++;
         }
     }
-    if (numElements != NULL) {*numElements = ctrEvents;}
-    if (oEvent != NULL) {*oEvent = events;}
 
     numIteration++;
-    return element.getEvent();
+}
+bool JuicyGUI::PollEvents(JuicyGUI_Event* oEvent) {
+    if (eventsFlushed) {
+        eventsFlushed = false;
+        updateEvents();
+    }
+    if (ctrEvents) {
+        if (oEvent != NULL) {
+            *oEvent = *(events[ctrEvents - 1]);
+        }
+        ctrEvents--;
+        return true;
+    } else {
+        eventsFlushed = true;
+        return false;
+    }
 }
 
-
-void JuicyGUI::GetScreenSize(JD_Point* oSize) {
-    if (oSize != NULL) element.getSize(oSize);
-}
-JD_I JuicyGUI::GetScreenSizeBigger(void) {
-    return (element.getWidth() > element.getHeight()) ? element.getWidth() : element.getHeight();
-}
-JD_I JuicyGUI::GetScreenSizeSmaller(void) {
-    return (element.getWidth() > element.getHeight()) ? element.getHeight() : element.getWidth();
-}
+void JuicyGUI::GetScreenSize(JD_Point* oSize) {if (oSize != NULL) element.getSize(oSize);}
+JD_I JuicyGUI::GetScreenSizeBigger(void) {return (element.getWidth() > element.getHeight()) ? element.getWidth() : element.getHeight();}
+JD_I JuicyGUI::GetScreenSizeSmaller(void) {return (element.getWidth() > element.getHeight()) ? element.getHeight() : element.getWidth();}
 
 void JuicyGUI::DrawElements(void) {
-    for (JD_INDEX i = 0; i < numElement; i++) {
-        elements[i]->draw();
-    }
+    for (JD_INDEX i = 0; i < numElement; i++) {elements[i]->draw();}
     engine->Present();
 }
 
@@ -117,9 +112,14 @@ bool JuicyGUI::evaluateElement(JuicyGUI_Element* iElement) {
     if (!(iElement->getFlag() & JUICYGUI_ELEMENTFLAG_DISABLED) && (iElement->getFlag() & JUICYGUI_ELEMENTFLAG_SHOW)) {
         if (mouseOver(iElement->getRect())) { // Mouse over?
             currentEvent |= JUICYGUI_EVENT_HOVER;
-            currentEvent |= (mouseState & JUICYGUI_CONTROL_ID_LMB) ? JUICYGUI_EVENT_PRESSED : JUICYGUI_EVENT_NONE;
-            currentEvent |= (mouseState & JUICYGUI_CONTROL_ID_LMB_CLICKED) ? JUICYGUI_EVENT_CLICKED : JUICYGUI_EVENT_NONE;
-            currentEvent |= (mouseState & JUICYGUI_CONTROL_ID_LMB_RELEASED) ? JUICYGUI_EVENT_RELEASED : JUICYGUI_EVENT_NONE;
+            if (mouseState) {
+                if (msFocusElement == JUICYGUI_LOWLVL_EMPTY_ID_NUM && mouseState & JUICYGUI_CONTROL_ID_LMB_CLICKED) {msFocusElement = iElement->getID();}
+                if (msFocusElement == iElement->getID()) {
+                    currentEvent |= (mouseState & JUICYGUI_CONTROL_ID_LMB) ? JUICYGUI_EVENT_PRESSED : JUICYGUI_EVENT_NONE;
+                    currentEvent |= (mouseState & JUICYGUI_CONTROL_ID_LMB_CLICKED) ? JUICYGUI_EVENT_CLICKED : JUICYGUI_EVENT_NONE;
+                    currentEvent |= (mouseState & JUICYGUI_CONTROL_ID_LMB_RELEASED) ? JUICYGUI_EVENT_RELEASED : JUICYGUI_EVENT_NONE;
+                }
+            }
         }
     }
     if (iElement->getEvent() != currentEvent) {
@@ -130,43 +130,29 @@ bool JuicyGUI::evaluateElement(JuicyGUI_Element* iElement) {
 }
 
 JD_FLAG JuicyGUI::GetMousePos(JD_Point* oPosition) {
-    if (oPosition != NULL) {
-        *oPosition = mousePos;
-    }
+    if (oPosition != NULL) {*oPosition = mousePos;}
     return mouseState;
 }
 JD_FLAG JuicyGUI::GetMouseMovement(JD_Point* oMovement) {
-    if (oMovement != NULL) {
-        *oMovement = mouseMove;
-    }
+    if (oMovement != NULL) {*oMovement = mouseMove;}
     return mouseState;
 }
 
-void JuicyGUI::updateMouse() {
+JD_FLAG JuicyGUI::updateMouse() {
     JD_FLAG newMouseState;
     JD_FLAG released;
     JD_FLAG clicked;
     JD_Point newMousePos;
-    newMouseState = SDL_GetMouseState(&newMousePos.x, &newMousePos.y);
+    newMouseState = engine->GetMouseState(&newMousePos);
     clicked = ((newMouseState ^ (mouseState & 0xf)) & newMouseState) << 4;
     released = ((newMouseState ^ (mouseState & 0xf)) & mouseState) << 8;
     mouseState = newMouseState | clicked | released;
     mouseMove = newMousePos - mousePos;
     mousePos = newMousePos;
+    return mouseState;
 }
 
-bool JuicyGUI::mouseOver(const JD_Rect* iRect) {
-    if (mousePos.y >= iRect->y) {
-        if (mousePos.y <= iRect->y + iRect->h) {
-            if (mousePos.x >= iRect->x) {
-                if (mousePos.x <= iRect->x + iRect->w) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
+bool JuicyGUI::mouseOver(const JD_Rect* iRect) {return JDM_RectContains(iRect, &mousePos);}
 
 JD_COLOR JuicyGUI::GetJuicyColor(void) {
     JD_COLOR juicy = 0;
@@ -191,10 +177,11 @@ JD_COLOR JuicyGUI::GetJuicy(void) {
         targetColor = GetJuicyColor();
         tmil_last += JUICYGUI_COLOR_MOD_PERIOD;
     }
+    JD_I timeDelta = (tmil_now - tmil_last);
     for (JD_INDEX i = 0; i < 3; i++) {
         JD_I last = (lastColor >> (i * 8 + 8)) & 0xff;
         JD_I target = (targetColor >> (i * 8 + 8)) & 0xff;
-        JD_I current = last + (((target - last) * JD_I(tmil_now - tmil_last)) / JUICYGUI_COLOR_MOD_PERIOD); // Must use INT
+        JD_I current = last + (((target - last) * timeDelta) / JUICYGUI_COLOR_MOD_PERIOD); // Must use INT
         currentColor |= (current & 0xff);
         currentColor <<= 8;
     }

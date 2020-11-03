@@ -183,18 +183,19 @@ void JEN::clearSprite(JuicySprite* iSprite) {
             switch ((iSprite->type)) {
                 case JUICYSPRITE_TYPE_SDL_TEXTURE:
                     freeSDL_Texture((SDL_Texture*)iSprite->sprite);
+                    iSprite->sprite = NULL;
                     iSprite->type = JUICYSPRITE_TYPE_RAW;
                     iSprite->flag &= ~JUICYSPRITE_FLAG_OPTIMIZED;
                     break;
                 case JUICYSPRITE_TYPE_SDL_SURFACE:
                     freeSDL_Surface((SDL_Surface*)iSprite->sprite, 0x0);
+                    iSprite->sprite = NULL;
                     iSprite->type = JUICYSPRITE_TYPE_RAW;
                     iSprite->flag &= ~JUICYSPRITE_FLAG_OPTIMIZED;
                     break;
                 default:
                     break;
             }
-            iSprite->sprite = NULL;
         }
     }
 }
@@ -550,8 +551,8 @@ JD_COLOR JEN::blendPixel(JD_COLOR iBlend, JD_COLOR iBase) {
     JD_COLOR blendA = iBlend & 0xff;
     JD_COLOR baseA = iBase & 0xff;
     for (JD_INDEX i = 0; i < 3; i++) {
-        blendCh = (iBlend >> (24 - 8 * i)) & 0xff;
-        baseCh = (iBase >> (24 - 8 * i)) & 0xff;
+        blendCh = (iBlend >> (24 - (i << 3))) & 0xff;
+        baseCh = (iBase >> (24 - (i << 3))) & 0xff;
         result |= ((blendCh * blendA + baseCh * (0xff - blendA)) / 0xff) & 0xff;
         result <<= 8;
     }

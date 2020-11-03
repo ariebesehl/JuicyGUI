@@ -102,7 +102,7 @@ void JuicyGUI_Button::createTextures() {
                                     }
                                     break;
                                 case JUICYGUI_BUTTON_FLAG_NORMAL: {
-                                        JuicySprite* textSprite = element.getEngine()->CreateSpriteText(ptrProperties->label, ptrProperties->fontProperties.fontPath, element.getHeight() / 2, ptrProperties->fontProperties.color, ptrProperties->fontProperties.style);
+                                        JuicySprite* textSprite = element.getEngine()->CreateSpriteText(ptrProperties->label, ptrProperties->fontProperties.fontPath, ((element.getHeight() / 2) > JUICYGUI_BUTTON_MIN_FONT_SIZE) ? (element.getHeight() / 2) : JUICYGUI_BUTTON_MIN_FONT_SIZE, ptrProperties->fontProperties.color, ptrProperties->fontProperties.style);
                                         if (textSprite != NULL) {
                                             element.getEngine()->BlendSprites(textSprite, buttonSprite);
                                             element.getEngine()->FreeSprite(textSprite);

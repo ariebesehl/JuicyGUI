@@ -27,12 +27,14 @@ class JuicyGUI_Element {
         JD_FLAG setEvent(JD_FLAG iEvent) {event = iEvent; return getEvent();};
         JD_FLAG attachEvent(JD_FLAG iEvent) {event |= iEvent; return getEvent();};
         JD_FLAG detachEvent(JD_FLAG iEvent) {event &= ~iEvent; return getEvent();};
-        void show() {attachFlag(JUICYGUI_ELEMENTFLAG_SHOW);};
-        void hide() {detachFlag(JUICYGUI_ELEMENTFLAG_SHOW);};
-        void show(bool iShow) {if(iShow) {attachFlag(JUICYGUI_ELEMENTFLAG_SHOW);} else {detachFlag(JUICYGUI_ELEMENTFLAG_SHOW);}};
         void enable() {detachFlag(JUICYGUI_ELEMENTFLAG_DISABLED);};
         void disable() {attachFlag(JUICYGUI_ELEMENTFLAG_DISABLED);};
-        void enable(bool iEnabled) {if(iEnabled) {detachFlag(JUICYGUI_ELEMENTFLAG_DISABLED);} else {attachFlag(JUICYGUI_ELEMENTFLAG_DISABLED);}};
+        void visible() {attachFlag(JUICYGUI_ELEMENTFLAG_SHOW);};
+        void invisible() {detachFlag(JUICYGUI_ELEMENTFLAG_SHOW);};
+        void show() {attachFlag(JUICYGUI_ELEMENTFLAG_SHOW); detachFlag(JUICYGUI_ELEMENTFLAG_DISABLED);};
+        void hide() {detachFlag(JUICYGUI_ELEMENTFLAG_SHOW); attachFlag(JUICYGUI_ELEMENTFLAG_DISABLED);};
+        void enable(bool iEnabled) {if(iEnabled) {enable();} else {disable();}};
+        void show(bool iShow) {if(iShow) {show();} else {hide();}};
         const JD_Rect* getRect(void) {return &rect;};
         bool setRect(const JD_Rect* iRect);
         void getPos(JD_Point* oPosition) {if (oPosition != NULL) oPosition->x = rect.x; oPosition->y = rect.y;};

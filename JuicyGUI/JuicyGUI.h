@@ -10,18 +10,23 @@
 typedef struct {
     JD_INDEX id;
     JD_FLAG type;
+    JD_FLAG data0;
+    JD_FLAG data1;
+    JD_FLAG data2;
+    JD_FLAG data3;
 } JuicyGUI_Event;
 
 class JuicyGUI {
     friend class JuicyGUI_Element;
     public:
-        JuicyGUI(SDL_Window* iWindow, SDL_Renderer* iRenderer, SDL_Event* iEvent);
+        JuicyGUI(SDL_Window* iWindow, SDL_Renderer* iRenderer);//, SDL_Event* iEvent);
         ~JuicyGUI(void);
 
-        JD_FLAG UpdateState(JuicyGUI_Event*** oEvent, JD_INDEX* oNumElements);
+        bool PollEvents(JuicyGUI_Event* oEvent);
 
         JEN* GetEngine(void) {return engine;};
 	    JD_TIME GetTicks(void) {return engine->GetTicks();};
+	    JD_TIME GetFramelessTicks(void) {return engine->GetFramelessTicks();};
         JD_TIME GetDelta(void){return engine->GetDelta();};
         JD_INDEX GetFPS(void) {return engine->GetFPS();};
         JD_FLAG GetMousePos(JD_Point* oPosition);
@@ -47,13 +52,16 @@ class JuicyGUI {
         bool evaluateElement(JuicyGUI_Element* iElement);
 
         JD_INDEX numElement;
+        JD_INDEX msFocusElement;
         JuicyGUI_Element** elements;
 
         JD_INDEX numEvents;
         JD_INDEX ctrEvents;
         JuicyGUI_Event** events;
+        bool eventsFlushed;
+        void updateEvents();
 
-        void updateMouse();
+        JD_FLAG updateMouse();
         bool mouseOver(const JD_Rect* iRect);
         JD_FLAG mouseState;
         JD_Point mousePos;

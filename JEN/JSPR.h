@@ -1,7 +1,7 @@
 #ifndef JSPR_H_INCLUDED
 #define JSPR_H_INCLUDED
 
-#include "JuicyGUI_Definitions.h"
+#include "../JuicyGUI/JuicyGUI_Definitions.h"
 
 #define JSPR_MAX_DRAW_NUM 0x1000
 

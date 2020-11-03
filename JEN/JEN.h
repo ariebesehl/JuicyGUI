@@ -5,7 +5,7 @@
 #include <SDL_image.h>
 #include <SDL_ttf.h>
 
-#include "JDM.h"
+#include "../JDM/JDM.h"
 
 
 #define JUICYENGINE_LL_FPS_UPDATE 250
@@ -53,6 +53,7 @@ class JEN {
 
 		SDL_Window* GetSDL_Window() {return windowSDL;};
 		SDL_Renderer* GetSDL_Renderer() {return rendererSDL;};
+		JD_FLAG GetMouseState(JD_Point* oMousePos) {if (oMousePos != NULL) {return SDL_GetMouseState(&(oMousePos->x), &(oMousePos->y));} else {return SDL_GetMouseState(NULL, NULL);}};
 
 		JD_I GetWindowWidth() {return sizeScreen.x;};
 		JD_I GetWindowHeight() {return sizeScreen.y;};
@@ -64,6 +65,7 @@ class JEN {
 
 		void SetMode(JD_FLAG iMode);
 	    JD_TIME GetTicks(void) {return tmilNow;};
+	    JD_TIME GetFramelessTicks(void) {return getTicks();};
         JD_TIME GetDelta(void){return tmilDelta;};
 	    JD_INDEX GetFPS(void) {return numFps;};
 
@@ -84,6 +86,7 @@ class JEN {
 		void Present();
 		void PresentSprite(JuicySprite* iSprite, const JD_Point* iPos);
 		void PresentSprite(JuicySprite* iSprite, const JD_Rect* iRect);
+		//void PresentPixel(JD_COLOR* iPixeldata, const JD_Rect* iRect);
 
 		void FreeSprite(JuicySprite* iSprite);
 	private:

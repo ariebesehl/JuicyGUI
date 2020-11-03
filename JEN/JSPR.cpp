@@ -41,12 +41,12 @@ JD_INDEX JSPR::AddSprite(JuicySprite* iSprite) {
 		return ctrSprites;
 	} else {
 	    if (ctrSprites >= numSprites) {
-            JDM_AddToList((void***)&sprites, &ctrSprites, (void*)iSprite);
-            numSprites = ctrSprites;
+            JDM_AddToList((void***)&sprites, numSprites, (void*)iSprite);
+            numSprites++;
 	    } else {
 	        sprites[ctrSprites] = iSprite;
-	        ctrSprites++;
 	    }
+        ctrSprites++;
 		return ctrSprites;
 	}
 }
@@ -71,7 +71,8 @@ JD_INDEX JSPR::AddInstruction(JD_INDEX iIndex, const JD_Rect* iRect) {
     if (sprites != NULL) {
         if (ctrInstructions < JSPR_MAX_DRAW_NUM) {
             if (ctrInstructions >= numInstructions) {
-                JDM_AddToList((void***)&instructions, &numInstructions, (void*)new JSPR_DrawInstruction);
+                JDM_AddToList((void***)&instructions, numInstructions, (void*)new JSPR_DrawInstruction);
+                numInstructions++;
             }
             instructions[ctrInstructions]->index = iIndex;
             instructions[ctrInstructions]->rect = *iRect;

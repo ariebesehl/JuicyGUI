@@ -1,7 +1,7 @@
 #ifndef JPM_H_INCLUDED
 #define JPM_H_INCLUDED
 
-#include "JuicyGUI_Definitions.h"
+#include "../JuicyGUI/JuicyGUI_Definitions.h"
 
 JD_INDEX JPM_GetEventIndex(JD_FLAG iEvent);
 

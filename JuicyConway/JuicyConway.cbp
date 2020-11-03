@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="JuicyConway" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Release">
+				<Option output="JuicyConway" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="0" />
+				<Option compiler="gcc" />
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-fexpensive-optimizations" />
+			<Add option="-flto" />
+			<Add option="-O3" />
+			<Add option="-Wall" />
+			<Add option="-fno-exceptions" />
+			<Add directory="C:/__lib/SDL/include/SDL2" />
+		</Compiler>
+		<Linker>
+			<Add option="-O3" />
+			<Add option="-flto" />
+			<Add option="-s" />
+			<Add option="-lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_ttf -lSDL2_mixer" />
+			<Add directory="C:/__lib/SDL/lib" />
+		</Linker>
+		<Unit filename="../JDM/JDM.cpp" />
+		<Unit filename="../JDM/JDM.h" />
+		<Unit filename="../JDM/JPM.cpp" />
+		<Unit filename="../JDM/JPM.h" />
+		<Unit filename="../JEN/JEN.cpp" />
+		<Unit filename="../JEN/JEN.h" />
+		<Unit filename="../JEN/JSPR.cpp" />
+		<Unit filename="../JEN/JSPR.h" />
+		<Unit filename="../JuicyGUI/Juicy.h" />
+		<Unit filename="../JuicyGUI/JuicyGUI.cpp" />
+		<Unit filename="../JuicyGUI/JuicyGUI.h" />
+		<Unit filename="../JuicyGUI/JuicyGUI_Box.cpp" />
+		<Unit filename="../JuicyGUI/JuicyGUI_Box.h" />
+		<Unit filename="../JuicyGUI/JuicyGUI_Button.cpp" />
+		<Unit filename="../JuicyGUI/JuicyGUI_Button.h" />
+		<Unit filename="../JuicyGUI/JuicyGUI_Charset.cpp" />
+		<Unit filename="../JuicyGUI/JuicyGUI_Charset.h" />
+		<Unit filename="../JuicyGUI/JuicyGUI_Definitions.h" />
+		<Unit filename="../JuicyGUI/JuicyGUI_Element.cpp" />
+		<Unit filename="../JuicyGUI/JuicyGUI_Element.h" />
+		<Unit filename="../JuicyGUI/Juicy_User.h" />
+		<Unit filename="../JuicyTE/JuicyTE.cpp" />
+		<Unit filename="../JuicyTE/JuicyTE.h" />
+		<Unit filename="conway_core.cpp" />
+		<Unit filename="conway_core.h" />
+		<Unit filename="conway_sdl.cpp" />
+		<Unit filename="conway_sdl.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="main.h" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
