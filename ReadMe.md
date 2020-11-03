@@ -2,7 +2,7 @@
 
 
 
-GUI-Library for use with SDL2.0
+GUI-Library for SDL2.0, written in C++
 
 
 
