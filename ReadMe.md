@@ -18,9 +18,9 @@ It's presence here is intended solely for illustrative purposes.
 
 An implementation of JuicyGUI can be observed in JuicyConway.
 
-*INSERT SCREENSHOT*
+![](https://raw.githubusercontent.com/ariebesehl/JuicyGUI/master/JuicyConway/__screenshot.png)
 
-A fully compiled version for Windows can be found here. *MAKE LINK*
+A fully compiled version for Windows can be found [here](https://github.com/ariebesehl/JuicyGUI/raw/master/JuicyConway/__latest.zip).
 
 
 
@@ -28,9 +28,9 @@ A fully compiled version for Windows can be found here. *MAKE LINK*
 
 To eliminate external dependency of SDL2.0, a version of JuicyGUI was being developed that interfaces directly with the WIN32 API.
 
-*INSERT SCREENSHOT*
+![](https://raw.githubusercontent.com/ariebesehl/JuicyGUI/master/Test_JENWIN/__screenshot.png)
 
-A fully compiled version can be found here. *MAKE LINK*
+A fully compiled version can be found [here](https://github.com/ariebesehl/JuicyGUI/raw/master/Test_JENWIN/__latest.zip).
 
 Development of C++-based JuicyGUI/JENWIN was then abandoned in favor of pursuing a purely C-based library, with parts of its code reused and recycled into its successor, [ZDK](https://github.com/ZaidaTek/ZDK), instead.
 
